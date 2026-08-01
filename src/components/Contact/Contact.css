@@ -1,0 +1,55 @@
+.contact {
+  padding: 80px 10%;
+  background: #f5f7fa;
+}
+
+.contact h2 {
+  text-align: center;
+  color: var(--primary);
+  margin-bottom: 50px;
+  font-size: 2.5rem;
+}
+
+.contact-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 50px;
+}
+
+.contact-info h3 {
+  color: var(--primary);
+  margin-bottom: 20px;
+}
+
+.contact-info p {
+  margin: 15px 0;
+  font-size: 18px;
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.contact-form input,
+.contact-form textarea {
+  padding: 15px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.contact-form button {
+  background: var(--secondary);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.contact-form button:hover {
+  background: #0077cc;
+}

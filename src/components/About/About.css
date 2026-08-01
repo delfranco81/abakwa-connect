@@ -1,0 +1,16 @@
+.about {
+  padding: 80px 10%;
+  background: var(--light);
+}
+
+.about h2 {
+  color: var(--primary);
+  margin-bottom: 20px;
+  font-size: 2.4rem;
+}
+
+.about p {
+  line-height: 1.8;
+  margin-bottom: 15px;
+  color: #555;
+}

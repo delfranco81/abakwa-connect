@@ -1,0 +1,48 @@
+.auth-page {
+  max-width: 500px;
+  margin: 60px auto;
+  padding: 35px;
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 8px 25px rgba(0,0,0,.1);
+}
+
+.auth-page h1 {
+  color: #003366;
+  margin-bottom: 10px;
+}
+
+.auth-page p {
+  margin-bottom: 30px;
+  color: #666;
+}
+
+.auth-page label {
+  display: block;
+  margin-top: 18px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.auth-page input,
+.auth-page select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.auth-page button {
+  margin-top: 30px;
+  width: 100%;
+  padding: 14px;
+  background: #003366;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.auth-page button:hover {
+  background: #0055aa;
+}

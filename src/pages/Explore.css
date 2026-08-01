@@ -1,0 +1,122 @@
+.explore-hero {
+  height: 70vh;
+  background: linear-gradient(
+      rgba(0,0,0,.45),
+      rgba(0,0,0,.45)
+    ),
+    url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee")
+      center/cover;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: white;
+  text-align: center;
+}
+
+.hero-overlay{
+    max-width:700px;
+    text-align:center;
+    color:white;
+    animation:fadeIn 1s;
+}
+
+.hero-overlay h1{
+    font-size:4rem;
+    margin-bottom:10px;
+}
+
+.hero-overlay h3{
+    color:#FFD700;
+    margin-bottom:20px;
+}
+
+.hero-overlay p{
+    font-size:1.2rem;
+    line-height:1.7;
+}
+
+.hero-btn{
+
+    margin-top:25px;
+
+    background:#0E7A3D;
+
+    color:white;
+
+    border:none;
+
+    padding:15px 40px;
+
+    border-radius:40px;
+
+    cursor:pointer;
+
+    font-size:18px;
+
+    transition:.3s;
+
+}
+
+.hero-btn:hover{
+
+    background:#0a5c2f;
+
+}
+
+.hero-dots{
+
+    display:flex;
+
+    justify-content:center;
+
+    gap:12px;
+
+    margin:20px 0;
+
+}
+
+.dot{
+
+    width:14px;
+
+    height:14px;
+
+    border-radius:50%;
+
+    background:#ccc;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+}
+
+.active-dot{
+
+    background:#0E7A3D;
+
+    transform:scale(1.3);
+
+}
+
+@keyframes fadeIn{
+
+    from{
+
+        opacity:0;
+
+        transform:translateY(20px);
+
+    }
+
+    to{
+
+        opacity:1;
+
+        transform:translateY(0);
+
+    }
+
+}

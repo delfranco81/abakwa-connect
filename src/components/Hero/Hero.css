@@ -1,0 +1,139 @@
+.hero{
+    height:85vh;
+
+    background-image:
+    linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55)),
+    url("https://images.unsplash.com/photo-1514565131-fce0801e5785?w=1600");
+
+    background-size:cover;
+    background-position:center;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.hero-overlay{
+    width:100%;
+    display:flex;
+    justify-content:center;
+}
+
+.hero-content{
+
+    width:min(900px,90%);
+
+    text-align:center;
+
+    color:white;
+}
+
+.hero h1{
+
+    font-size:60px;
+
+    line-height:1.2;
+
+    margin-bottom:20px;
+}
+
+.hero p{
+
+    font-size:22px;
+
+    margin-bottom:35px;
+
+    opacity:.95;
+}
+
+.hero-search{
+
+    margin-bottom:35px;
+}
+
+.hero-search input{
+
+    width:100%;
+
+    max-width:650px;
+
+    padding:18px 25px;
+
+    border:none;
+
+    border-radius:50px;
+
+    font-size:18px;
+
+    outline:none;
+}
+
+.hero-buttons{
+
+    display:flex;
+
+    justify-content:center;
+
+    gap:20px;
+
+    flex-wrap:wrap;
+}
+
+.btn-primary{
+
+    background:#009688;
+
+    color:white;
+
+    padding:16px 30px;
+
+    border-radius:50px;
+
+    text-decoration:none;
+
+    font-weight:bold;
+
+    transition:.3s;
+}
+
+.btn-primary:hover{
+
+    background:#00796b;
+}
+
+.btn-secondary{
+
+    background:white;
+
+    color:#009688;
+
+    padding:16px 30px;
+
+    border-radius:50px;
+
+    text-decoration:none;
+
+    font-weight:bold;
+
+    transition:.3s;
+}
+
+.btn-secondary:hover{
+
+    background:#eeeeee;
+}
+
+@media(max-width:768px){
+
+.hero h1{
+
+font-size:38px;
+
+}
+
+.hero p{
+
+font-size:18px;
+
+}
+}

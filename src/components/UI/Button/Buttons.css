@@ -1,0 +1,33 @@
+.btn{
+    padding:12px 24px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:16px;
+    transition:.3s;
+    font-weight:600;
+}
+
+.primary{
+    background:#003366;
+    color:white;
+}
+
+.primary:hover{
+    background:#004b99;
+}
+
+.secondary{
+    background:#f5f5f5;
+    color:#003366;
+}
+
+.success{
+    background:#00A651;
+    color:white;
+}
+
+.btn:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+}
