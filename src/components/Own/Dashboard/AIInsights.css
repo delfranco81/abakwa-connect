@@ -1,0 +1,31 @@
+.ai-panel{
+
+background:#0f172a;
+
+color:white;
+
+padding:25px;
+
+border-radius:18px;
+
+margin-bottom:25px;
+
+}
+
+.ai-panel h2{
+
+margin-bottom:15px;
+
+}
+
+.ai-panel ul{
+
+padding-left:18px;
+
+}
+
+.ai-panel li{
+
+margin-bottom:10px;
+
+}

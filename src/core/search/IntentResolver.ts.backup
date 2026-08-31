@@ -1,0 +1,212 @@
+﻿import type { EcosIntent } from "./SearchTypes";
+
+const rules: Array<{
+  intent: EcosIntent;
+  keywords: string[];
+}> = [
+  {
+    intent: "government",
+    keywords: [
+      "government",
+      "immigration",
+      "passport",
+      "visa",
+      "tax",
+      "document",
+      "birth certificate",
+      "national id",
+      "id card",
+      "permit",
+      "ministry",
+      "administration",
+      "certificate",
+      "public service",
+    ],
+  },
+
+  {
+    intent: "education",
+    keywords: [
+      "school",
+      "university",
+      "college",
+      "education",
+      "student",
+      "transcript",
+      "admission",
+      "teacher",
+      "course",
+      "institution",
+      "certificate",
+      "degree",
+    ],
+  },
+
+  {
+    intent: "housing",
+    keywords: [
+      "house",
+      "home",
+      "property",
+      "apartment",
+      "flat",
+      "rent",
+      "rental",
+      "land",
+      "plot",
+      "buy house",
+      "sell house",
+      "real estate",
+    ],
+  },
+
+  {
+    intent: "jobs",
+    keywords: [
+      "job",
+      "jobs",
+      "employment",
+      "work",
+      "career",
+      "vacancy",
+      "vacancies",
+      "recruitment",
+      "hiring",
+      "government job",
+    ],
+  },
+
+  {
+    intent: "talent",
+    keywords: [
+      "carpenter",
+      "builder",
+      "plumber",
+      "electrician",
+      "mechanic",
+      "tailor",
+      "designer",
+      "developer",
+      "photographer",
+      "cleaner",
+      "driver",
+      "technician",
+      "repair",
+      "talent",
+      "professional",
+      "worker",
+      "who can help",
+    ],
+  },
+
+  {
+    intent: "tourism",
+    keywords: [
+      "tourist",
+      "tourism",
+      "visit",
+      "attraction",
+      "landmark",
+      "palace",
+      "museum",
+      "culture",
+      "traditional",
+      "dance",
+      "festival",
+      "heritage",
+    ],
+  },
+
+  {
+    intent: "food",
+    keywords: [
+      "food",
+      "restaurant",
+      "meal",
+      "eat",
+      "eating",
+      "chop",
+      "african food",
+      "bar",
+      "cafe",
+      "bakery",
+    ],
+  },
+
+  {
+    intent: "transport",
+    keywords: [
+      "taxi",
+      "bike",
+      "motorbike",
+      "transport",
+      "driver",
+      "car",
+      "travel",
+      "bus",
+    ],
+  },
+
+  {
+    intent: "community",
+    keywords: [
+      "community",
+      "event",
+      "events",
+      "group",
+      "church",
+      "association",
+      "meeting",
+      "people",
+    ],
+  },
+
+  {
+    intent: "service",
+    keywords: [
+      "service",
+      "services",
+      "cleaning",
+      "wash",
+      "repair",
+      "booking",
+      "hotel",
+      "business",
+      "company",
+    ],
+  },
+];
+
+export function resolveIntent(
+  query: string
+): EcosIntent {
+  const normalized = query
+    .toLowerCase()
+    .trim();
+
+  if (!normalized) {
+    return "unknown";
+  }
+
+  let bestIntent: EcosIntent = "unknown";
+  let bestScore = 0;
+
+  for (const rule of rules) {
+    let score = 0;
+
+    for (const keyword of rule.keywords) {
+      if (normalized.includes(keyword)) {
+        score += keyword.includes(" ")
+          ? 3
+          : 1;
+      }
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestIntent = rule.intent;
+    }
+  }
+
+  return bestIntent;
+}

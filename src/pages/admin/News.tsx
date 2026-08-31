@@ -198,8 +198,8 @@ function News() {
 
                   <td style={{ padding: 14 }}>
                     {item.published
-                      ? "✅ Published"
-                      : "📝 Draft"}
+                      ? "âœ… Published"
+                      : "ðŸ“ Draft"}
                   </td>
 
                   <td style={{ padding: 14 }}>
@@ -212,7 +212,7 @@ function News() {
                       <Link
                         to={`/admin/news/${item.id}`}
                       >
-                        ✏️ Edit
+                        âœï¸ Edit
                       </Link>
 
                       <button
@@ -226,7 +226,7 @@ function News() {
                           cursor: "pointer",
                         }}
                       >
-                        🗑 Delete
+                        ðŸ—‘ Delete
                       </button>
                     </div>
                   </td>

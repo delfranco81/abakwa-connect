@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import DashboardSidebar from "../components/Owner/DashboardSidebar";
 import DashboardHeader from "../components/Owner/DashboardHeader";
+
 export default function OwnerDashboard() {
   return (
     <div

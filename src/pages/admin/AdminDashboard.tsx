@@ -1,20 +1,20 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import DashboardLayout from "../../components/Admin/DashboardLayout";
 
 function AdminDashboard() {
   const cards = [
-    { title: "Businesses", path: "/admin/businesses", icon: "🏢" },
-    { title: "Places", path: "/admin/places", icon: "📍" },
-    { title: "Schools", path: "/admin/schools", icon: "🎓" },
-    { title: "Hotels", path: "/admin/hotels", icon: "🏨" },
-    { title: "Restaurants", path: "/admin/restaurants", icon: "🍽" },
-    { title: "Tourism", path: "/admin/tourism", icon: "🌄" },
-    { title: "Fondoms", path: "/admin/fondoms", icon: "👑" },
-    { title: "Traditional Meals", path: "/admin/meals", icon: "🍲" },
-    { title: "Festivals", path: "/admin/festivals", icon: "🎭" },
-    { title: "Gallery", path: "/admin/gallery", icon: "📸" },
-    { title: "Featured Places", path: "/admin/featured", icon: "⭐" },
-    { title: "Users", path: "/admin/users", icon: "👥" },
+    { title: "Businesses", path: "/admin/businesses", icon: "\uD83C\uDFE2" },
+    { title: "Places", path: "/admin/places", icon: "\uD83D\uDCCD" },
+    { title: "Schools", path: "/admin/schools", icon: "\uD83C\uDF93" },
+    { title: "Hotels", path: "/admin/hotels", icon: "\uD83C\uDFE8" },
+    { title: "Restaurants", path: "/admin/restaurants", icon: "\uD83C\uDF7D\uFE0F" },
+    { title: "Tourism", path: "/admin/tourism", icon: "\uD83C\uDF04" },
+    { title: "Fondoms", path: "/admin/fondoms", icon: "\uD83D\uDC51" },
+    { title: "Traditional Meals", path: "/admin/meals", icon: "\uD83C\uDF72" },
+    { title: "Festivals", path: "/admin/festivals", icon: "\uD83C\uDF89" },
+    { title: "Gallery", path: "/admin/gallery", icon: "\uD83D\uDCF8" },
+    { title: "Featured Places", path: "/admin/featured", icon: "\u2B50" },
+    { title: "Users", path: "/admin/users", icon: "\uD83D\uDC65" },
   ];
 
   return (

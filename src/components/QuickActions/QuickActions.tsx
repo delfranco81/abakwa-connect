@@ -1,66 +1,87 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
+import { useLanguage } from "@/context/LanguageContext";
 import "./QuickActions.css";
 
 const actions = [
   {
     icon: "🚖",
-    title: "Taxi",
+    titleEn: "Taxi",
+    titleFr: "Taxi",
     category: "Taxi",
   },
   {
     icon: "🍽️",
-    title: "Restaurants",
+    titleEn: "Restaurants",
+    titleFr: "Restaurants",
     category: "Restaurant",
   },
   {
     icon: "🏨",
-    title: "Hotels",
+    titleEn: "Hotels",
+    titleFr: "Hôtels",
     category: "Hotel",
   },
   {
     icon: "💊",
-    title: "Pharmacy",
+    titleEn: "Pharmacy",
+    titleFr: "Pharmacie",
     category: "Pharmacy",
   },
   {
     icon: "🔧",
-    title: "Mechanic",
+    titleEn: "Mechanic",
+    titleFr: "Mécanicien",
     category: "Mechanic",
   },
   {
     icon: "🧹",
-    title: "Cleaning",
+    titleEn: "Cleaning",
+    titleFr: "Nettoyage",
     category: "Cleaning",
   },
   {
     icon: "🛒",
-    title: "Shopping",
+    titleEn: "Shopping",
+    titleFr: "Courses",
     category: "Supermarket",
   },
   {
     icon: "🚨",
-    title: "Emergency",
+    titleEn: "Emergency",
+    titleFr: "Urgences",
     category: "Hospital",
   },
 ];
 
 function QuickActions() {
+  const { language } = useLanguage();
+
   return (
     <section className="quick-actions">
 
-      <h2>Quick Access</h2>
+      <h2>
+        {language === "fr"
+          ? "Accès rapide"
+          : "Quick Access"}
+      </h2>
 
       <div className="quick-grid">
 
         {actions.map((action) => (
           <Link
-            key={action.title}
-            to={`/businesses?category=${encodeURIComponent(action.category)}`}
+            key={action.titleEn}
+            to={`/businesses?category=${encodeURIComponent(
+              action.category
+            )}`}
             className="quick-card"
           >
             <span>{action.icon}</span>
 
-            <h3>{action.title}</h3>
+            <h3>
+              {language === "fr"
+                ? action.titleFr
+                : action.titleEn}
+            </h3>
           </Link>
         ))}
 

@@ -1,27 +1,31 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 
 type Props = {
-  placeId: string;
+  businessId: string;
 };
 
 type GalleryImage = {
-  id: string;
+  id: string | number;
   image_url: string;
-  uploaded_by: string;
+  uploaded_by?: string | null;
+  caption?: string | null;
+  created_at?: string | null;
 };
 
 export default function BusinessGallery({
-  placeId,
+  businessId,
 }: Props) {
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [user, setUser] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
+    if (!businessId) return;
+
     loadUser();
     loadGallery();
-  }, [placeId]);
+  }, [businessId]);
 
   async function loadUser() {
     const {
@@ -32,68 +36,124 @@ export default function BusinessGallery({
   }
 
   async function loadGallery() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("business_gallery")
       .select("*")
-      .eq("place_id", placeId)
+      .eq("business_id", businessId)
       .order("created_at", {
         ascending: false,
       });
 
-    setImages(data || []);
+    if (error) {
+      console.error(
+        "Unable to load business gallery:",
+        error
+      );
+
+      setImages([]);
+      return;
+    }
+
+    setImages((data || []) as GalleryImage[]);
   }
 
   async function uploadImage(
     e: React.ChangeEvent<HTMLInputElement>
   ) {
-    if (!e.target.files?.length || !user) return;
-
-    const file = e.target.files[0];
-
-    setUploading(true);
-
-    const filename =
-      `${Date.now()}-${file.name}`;
-
-    const { error: uploadError } =
-      await supabase.storage
-        .from("business-gallery")
-        .upload(filename, file);
-
-    if (uploadError) {
-      alert(uploadError.message);
-      setUploading(false);
+    if (!e.target.files?.length || !user) {
       return;
     }
 
-    const {
-      data: { publicUrl },
-    } = supabase.storage
-      .from("business-gallery")
-      .getPublicUrl(filename);
+    const file = e.target.files[0];
 
-    await supabase
-      .from("business_gallery")
-      .insert({
-        place_id: placeId,
-        image_url: publicUrl,
-        uploaded_by: user.id,
-      });
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image.");
+      return;
+    }
 
-    await loadGallery();
+    const maxSize = 10 * 1024 * 1024;
 
-    setUploading(false);
+    if (file.size > maxSize) {
+      alert("Image must be smaller than 10 MB.");
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const safeName = file.name
+        .replace(/[^a-zA-Z0-9._-]/g, "-");
+
+      const filename =
+        `${businessId}/${Date.now()}-${safeName}`;
+
+      const { error: uploadError } =
+        await supabase.storage
+          .from("business-gallery")
+          .upload(filename, file, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage
+        .from("business-gallery")
+        .getPublicUrl(filename);
+
+      const { error: databaseError } =
+        await supabase
+          .from("business_gallery")
+          .insert({
+            business_id: businessId,
+            image_url: publicUrl,
+            uploaded_by: user.id,
+          });
+
+      if (databaseError) {
+        throw databaseError;
+      }
+
+      await loadGallery();
+
+      e.target.value = "";
+    } catch (error: any) {
+      console.error(
+        "Gallery upload failed:",
+        error
+      );
+
+      alert(
+        error?.message ||
+          "Unable to upload image."
+      );
+    } finally {
+      setUploading(false);
+    }
   }
 
-  async function deleteImage(id: string) {
-    if (!confirm("Delete this image?")) return;
+  async function deleteImage(
+    image: GalleryImage
+  ) {
+    if (!confirm("Delete this image?")) {
+      return;
+    }
 
-    await supabase
+    const { error } = await supabase
       .from("business_gallery")
       .delete()
-      .eq("id", id);
+      .eq("id", image.id);
 
-    loadGallery();
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    await loadGallery();
   }
 
   return (
@@ -108,27 +168,34 @@ export default function BusinessGallery({
         <div
           style={{
             margin: "20px 0",
+            padding: 15,
+            background: "#f8fafc",
+            borderRadius: 10,
           }}
         >
           <input
             type="file"
             accept="image/*"
             onChange={uploadImage}
+            disabled={uploading}
           />
 
           {uploading && (
-            <p>Uploading...</p>
+            <p>
+              Uploading image...
+            </p>
           )}
         </div>
       )}
 
-      {images.length === 0 && (
+      {!images.length && (
         <div
           style={{
             background: "#fafafa",
             padding: 40,
             borderRadius: 10,
             textAlign: "center",
+            color: "#64748b",
           }}
         >
           No photos uploaded yet.
@@ -141,6 +208,7 @@ export default function BusinessGallery({
           gridTemplateColumns:
             "repeat(auto-fill,minmax(220px,1fr))",
           gap: 15,
+          marginTop: 20,
         }}
       >
         {images.map((image) => (
@@ -152,19 +220,36 @@ export default function BusinessGallery({
           >
             <img
               src={image.image_url}
-              alt=""
+              alt={
+                image.caption ||
+                "Business gallery"
+              }
               style={{
                 width: "100%",
                 height: 200,
                 objectFit: "cover",
                 borderRadius: 10,
+                display: "block",
               }}
             />
 
+            {image.caption && (
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  color: "#64748b",
+                  fontSize: 13,
+                }}
+              >
+                {image.caption}
+              </p>
+            )}
+
             {user?.id === image.uploaded_by && (
               <button
+                type="button"
                 onClick={() =>
-                  deleteImage(image.id)
+                  deleteImage(image)
                 }
                 style={{
                   position: "absolute",

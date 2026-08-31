@@ -439,7 +439,7 @@ function Categories() {
                 marginTop: 8,
               }}
             >
-              {longestCategory?.name || "—"}
+              {longestCategory?.name || "â€”"}
             </div>
           </div>
         </div>
@@ -576,8 +576,8 @@ function Categories() {
                 {submitting
                   ? "Saving..."
                   : editingId
-                  ? "💾 Save Changes"
-                  : "➕ Add Category"}
+                  ? "ðŸ’¾ Save Changes"
+                  : "âž• Add Category"}
               </button>
 
               {editingId && (
@@ -633,14 +633,14 @@ function Categories() {
                   cursor: "pointer",
                 }}
               >
-                🔄 Refresh
+                ðŸ”„ Refresh
               </button>
             </div>
 
             {/* Search */}
             <input
               type="text"
-              placeholder="🔍 Search categories..."
+              placeholder="ðŸ” Search categories..."
               value={search}
               onChange={(e) =>
                 setSearch(e.target.value)
@@ -809,7 +809,7 @@ function Categories() {
                                       "pointer",
                                   }}
                                 >
-                                  ✏️ Edit
+                                  âœï¸ Edit
                                 </button>
 
                                 <button
@@ -840,7 +840,7 @@ function Categories() {
                                   {deletingId ===
                                   category.id
                                     ? "Deleting..."
-                                    : "🗑️ Delete"}
+                                    : "ðŸ—‘ï¸ Delete"}
                                 </button>
                               </div>
                             </td>

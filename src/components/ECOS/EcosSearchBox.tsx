@@ -1,0 +1,901 @@
+﻿import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
+
+import { useNavigate } from "react-router-dom";
+
+import { supabase } from "../../lib/supabase";
+import { useLanguage } from "../../context/LanguageContext";
+
+type Props = {
+  initialValue?: string;
+  placeholder?: string;
+  compact?: boolean;
+};
+
+type SearchHistory = {
+  id: string;
+  query: string;
+  created_at: string;
+};
+
+type SmartSuggestion = {
+  query: string;
+  icon: string;
+  label: string;
+  description: string;
+};
+
+const SMART_SUGGESTIONS: SmartSuggestion[] = [
+  {
+    query: "I want to register my business",
+    icon: "🏢",
+    label: "Register a business",
+    description: "List your business on Everyday Connect.",
+  },
+  {
+    query: "I want to register my talent",
+    icon: "⭐",
+    label: "Register my talent",
+    description: "Offer your professional skills and services.",
+  },
+  {
+    query: "I want to register my service",
+    icon: "🛠️",
+    label: "Register a service",
+    description: "Make your service discoverable.",
+  },
+  {
+    query: "I want to manage my business",
+    icon: "📊",
+    label: "Manage my business",
+    description: "Open your business dashboard.",
+  },
+  {
+    query: "I want to book a car wash",
+    icon: "🚗",
+    label: "Book a car wash",
+    description: "Find and book a car wash service.",
+  },
+  {
+    query: "car washes in Bamenda",
+    icon: "🚘",
+    label: "Car washes in Bamenda",
+    description: "Find car wash businesses near Bamenda.",
+  },
+  {
+    query: "restaurants in Bamenda",
+    icon: "🍽️",
+    label: "Restaurants in Bamenda",
+    description: "Find restaurants and places to eat.",
+  },
+  {
+    query: "schools in Bamenda",
+    icon: "🎓",
+    label: "Schools in Bamenda",
+    description: "Find schools and education services.",
+  },
+  {
+    query: "jobs in Bamenda",
+    icon: "💼",
+    label: "Jobs in Bamenda",
+    description: "Find employment opportunities.",
+  },
+  {
+    query: "houses for rent in Bamenda",
+    icon: "🏠",
+    label: "Houses for rent",
+    description: "Find available housing.",
+  },
+];
+
+export default function EcosSearchBox({
+  initialValue = "",
+  placeholder,
+  compact = false,
+}: Props) {
+  const navigate = useNavigate();
+  const { t } = useLanguage();
+
+  const inputRef =
+    useRef<HTMLInputElement>(null);
+
+  const containerRef =
+    useRef<HTMLDivElement>(null);
+
+  const [query, setQuery] =
+    useState(initialValue);
+
+  const [history, setHistory] =
+    useState<SearchHistory[]>([]);
+
+  const [user, setUser] =
+    useState<any>(null);
+
+  const [showSuggestions, setShowSuggestions] =
+    useState(false);
+
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const [savingSearch, setSavingSearch] =
+    useState(false);
+
+  const [listening, setListening] =
+    useState(false);
+
+  const [selectedSuggestion, setSelectedSuggestion] =
+    useState(-1);
+
+  useEffect(() => {
+    setQuery(initialValue);
+  }, [initialValue]);
+
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  async function loadUser() {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      setUser(user);
+
+      if (user) {
+        await loadHistory(user.id);
+      }
+    } catch (error) {
+      console.error(
+        "Search user loading error:",
+        error
+      );
+    }
+  }
+
+  async function loadHistory(
+    userId: string
+  ) {
+    setLoadingHistory(true);
+
+    try {
+      const { data, error } =
+        await supabase
+          .from("ecos_search_history")
+          .select(
+            "id, query, created_at"
+          )
+          .eq("user_id", userId)
+          .order("created_at", {
+            ascending: false,
+          })
+          .limit(10);
+
+      if (error) {
+        console.error(
+          "Search history error:",
+          error
+        );
+
+        return;
+      }
+
+      setHistory(
+        (data || []) as SearchHistory[]
+      );
+    } finally {
+      setLoadingHistory(false);
+    }
+  }
+
+  async function saveSearch(
+    searchQuery: string
+  ) {
+    if (!user) return;
+
+    const cleanQuery =
+      searchQuery.trim();
+
+    if (!cleanQuery) return;
+
+    setSavingSearch(true);
+
+    try {
+      const { data: existing } =
+        await supabase
+          .from("ecos_search_history")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("query", cleanQuery)
+          .limit(1);
+
+      if (
+        existing &&
+        existing.length > 0
+      ) {
+        await supabase
+          .from("ecos_search_history")
+          .delete()
+          .eq("id", existing[0].id);
+      }
+
+      const { error } =
+        await supabase
+          .from("ecos_search_history")
+          .insert({
+            user_id: user.id,
+            query: cleanQuery,
+          });
+
+      if (error) {
+        console.error(
+          "Search save error:",
+          error
+        );
+
+        return;
+      }
+
+      await loadHistory(user.id);
+    } finally {
+      setSavingSearch(false);
+    }
+  }
+
+  async function runSearch(
+    value: string
+  ) {
+    const cleanQuery =
+      value.trim();
+
+    if (!cleanQuery) {
+      return;
+    }
+
+    setQuery(cleanQuery);
+    setShowSuggestions(false);
+    setSelectedSuggestion(-1);
+
+    await saveSearch(cleanQuery);
+
+    navigate(
+      `/search?search=${encodeURIComponent(
+        cleanQuery
+      )}`
+    );
+  }
+
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    await runSearch(query);
+  }
+
+  function handleKeyDown(
+    event: KeyboardEvent<HTMLInputElement>
+  ) {
+    if (event.key === "Escape") {
+      setShowSuggestions(false);
+      setSelectedSuggestion(-1);
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+
+      if (suggestions.length > 0) {
+        setSelectedSuggestion((current) =>
+          Math.min(
+            current + 1,
+            suggestions.length - 1
+          )
+        );
+      }
+
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+
+      if (suggestions.length > 0) {
+        setSelectedSuggestion((current) =>
+          Math.max(current - 1, 0)
+        );
+      }
+
+      return;
+    }
+
+    if (
+      event.key === "Enter" &&
+      selectedSuggestion >= 0 &&
+      suggestions[selectedSuggestion]
+    ) {
+      event.preventDefault();
+
+      runSearch(
+        suggestions[selectedSuggestion]
+          .query
+      );
+    }
+  }
+
+
+  useEffect(() => {
+    function handleOutsideClick(
+      event: MouseEvent
+    ) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(
+          event.target as Node
+        )
+      ) {
+        setShowSuggestions(false);
+        setSelectedSuggestion(-1);
+      }
+    }
+
+    document.addEventListener(
+      "mousedown",
+      handleOutsideClick
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleOutsideClick
+      );
+    };
+  }, []);
+
+  const filteredHistory =
+    query.trim()
+      ? history.filter((item) =>
+          item.query
+            .toLowerCase()
+            .includes(
+              query
+                .trim()
+                .toLowerCase()
+            )
+        )
+      : history;
+
+  const normalizedQuery =
+    query.trim().toLowerCase();
+
+  const smartSuggestions =
+    normalizedQuery
+      ? SMART_SUGGESTIONS.filter(
+          (item) =>
+            item.query
+              .toLowerCase()
+              .includes(
+                normalizedQuery
+              ) ||
+            item.label
+              .toLowerCase()
+              .includes(
+                normalizedQuery
+              )
+        )
+      : SMART_SUGGESTIONS;
+
+  const historySuggestions =
+    normalizedQuery
+      ? filteredHistory.filter(
+          (item) =>
+            !smartSuggestions.some(
+              (suggestion) =>
+                suggestion.query.toLowerCase() ===
+                item.query.toLowerCase()
+            )
+        )
+      : filteredHistory;
+
+  /*
+   * =========================================================
+   * ECOS SMART SUGGESTIONS
+   * =========================================================
+   *
+   * These suggestions are available even when the user is
+   * not logged in and has no search history.
+   *
+   * They use the existing runSearch() function, so clicking
+   * one of these suggestions goes through the normal ECOS
+   * action resolver.
+   */
+
+  const baseSuggestions = [
+    {
+      query: "I want to register my business",
+      icon: "🏢",
+      label: "Register a business",
+      description:
+        "List your business on Everyday Connect.",
+    },
+    {
+      query: "I want to register my talent",
+      icon: "⭐",
+      label: "Register my talent",
+      description:
+        "Offer your professional skills and services.",
+    },
+    {
+      query: "I want to register my service",
+      icon: "🛠️",
+      label: "Register a service",
+      description:
+        "Make your service discoverable.",
+    },
+    {
+      query: "I want to manage my business",
+      icon: "📊",
+      label: "Manage my business",
+      description:
+        "Open your business dashboard.",
+    },
+    {
+      query: "I want to book a car wash",
+      icon: "🚗",
+      label: "Book a car wash",
+      description:
+        "Find and book a car wash service.",
+    },
+    {
+      query: "businesses near me",
+      icon: "📍",
+      label: t.searchBusinessesNearMe,
+      description:
+        t.searchBusinessesNearMeDescription,
+    },
+  ];
+
+
+  const matchingSuggestions =
+    normalizedQuery
+      ? baseSuggestions.filter(
+          (suggestion) =>
+            suggestion.label
+              .toLowerCase()
+              .includes(normalizedQuery) ||
+            suggestion.query
+              .toLowerCase()
+              .includes(normalizedQuery) ||
+            suggestion.description
+              .toLowerCase()
+              .includes(normalizedQuery)
+        )
+      : baseSuggestions;
+
+  const suggestions = [
+    ...matchingSuggestions.slice(0, 6),
+
+    ...historySuggestions
+      .filter((item) => {
+        if (!normalizedQuery) {
+          return true;
+        }
+
+        return item.query
+          .toLowerCase()
+          .includes(normalizedQuery);
+      })
+      .slice(0, 4)
+      .map((item) => ({
+        query: item.query,
+        icon: "🕘",
+        label: item.query,
+        description: t.searchRecentSearches,
+      })),
+  ];
+
+  function startVoiceSearch() {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      window.alert(
+        "Voice search is not supported by this browser. Please try Google Chrome."
+      );
+
+      return;
+    }
+
+    const recognition =
+      new SpeechRecognition();
+
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.lang =
+      navigator.language || "en-US";
+
+    recognition.onstart = () => {
+      setListening(true);
+    };
+
+    recognition.onresult = (
+      event: any
+    ) => {
+      const transcript =
+        event?.results?.[0]?.[0]
+          ?.transcript || "";
+
+      const cleanTranscript =
+        String(transcript).trim();
+
+      if (cleanTranscript) {
+        setQuery(cleanTranscript);
+        setShowSuggestions(true);
+      }
+    };
+
+    recognition.onerror = (
+      event: any
+    ) => {
+      console.error(
+        "Voice search error:",
+        event
+      );
+
+      setListening(false);
+
+      if (
+        event?.error === "not-allowed"
+      ) {
+        window.alert(
+          t.searchMicrophonePermission
+        );
+      } else if (
+        event?.error === "no-speech"
+      ) {
+        window.alert(
+          t.searchNoSpeech
+        );
+      }
+    };
+
+    recognition.onend = () => {
+      setListening(false);
+    };
+
+    try {
+      recognition.start();
+    } catch (error) {
+      console.error(
+        "Could not start voice search:",
+        error
+      );
+
+      setListening(false);
+    }
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: "relative",
+        width: "100%",
+        maxWidth: compact
+          ? 650
+          : 900,
+        margin: "0 auto",
+      }}
+    >
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          display: "flex",
+          gap: 10,
+          width: "100%",
+        }}
+      >
+        <div
+          style={{
+            position: "relative",
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(event) => {
+              setQuery(
+                event.target.value
+              );
+              setSelectedSuggestion(-1);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => {
+              setShowSuggestions(true);
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              listening
+                ? t.searchListening
+                : placeholder ?? t.searchPlaceholder
+            }
+            aria-label={t.searchPlaceholder}
+            aria-autocomplete="list"
+            autoComplete="off"
+            style={{
+              width: "100%",
+              minWidth: 0,
+              padding: compact
+                ? "12px 15px"
+                : "16px 18px",
+              border:
+                "1px solid #d1d5db",
+              borderRadius: 12,
+              outline: "none",
+              fontSize:
+                compact ? 15 : 17,
+              background: "#fff",
+              color: "#111827",
+              boxSizing: "border-box",
+            }}
+          />
+
+          {showSuggestions &&
+            suggestions.length > 0 && (
+              <div
+                style={{
+                  position:
+                    "absolute",
+                  top: "calc(100% + 8px)",
+                  left: 0,
+                  right: 0,
+                  background: "#fff",
+                  border:
+                    "1px solid #e5e7eb",
+                  borderRadius: 14,
+                  boxShadow:
+                    "0 18px 45px rgba(0,0,0,0.14)",
+                  overflow: "hidden",
+                  zIndex: 1000,
+                }}
+              >
+                <div
+                  style={{
+                    padding:
+                      "11px 15px",
+                    borderBottom:
+                      "1px solid #f1f5f9",
+                    color: "#64748b",
+                    fontSize: 12,
+                    fontWeight: 700,
+                  }}
+                >
+                  {normalizedQuery
+                    ? t.searchSuggestedSearches
+                    : t.searchTryOneOfThese}
+                </div>
+
+                {suggestions.map(
+                  (suggestion, index) => (
+                    <button
+                      key={`${suggestion.query}-${index}`}
+                      type="button"
+                      onMouseDown={(event) =>
+                        event.preventDefault()
+                      }
+                      onClick={() =>
+                        runSearch(
+                          suggestion.query
+                        )
+                      }
+                      style={{
+                        width: "100%",
+                        border: "none",
+                        background:
+                          selectedSuggestion ===
+                          index
+                            ? "#eff6ff"
+                            : "#fff",
+                        display: "flex",
+                        alignItems:
+                          "center",
+                        gap: 12,
+                        padding:
+                          "12px 15px",
+                        cursor:
+                          "pointer",
+                        textAlign:
+                          "left",
+                        borderBottom:
+                          "1px solid #f8fafc",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 10,
+                          background:
+                            "#eff6ff",
+                          display:
+                            "flex",
+                          alignItems:
+                            "center",
+                          justifyContent:
+                            "center",
+                          fontSize: 18,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {
+                          suggestion.icon
+                        }
+                      </span>
+
+                      <span
+                        style={{
+                          minWidth: 0,
+                          flex: 1,
+                        }}
+                      >
+                        <span
+                          style={{
+                            display:
+                              "block",
+                            color:
+                              "#0f172a",
+                            fontSize: 14,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {
+                            suggestion.label
+                          }
+                        </span>
+
+                        <span
+                          style={{
+                            display:
+                              "block",
+                            marginTop: 3,
+                            color:
+                              "#64748b",
+                            fontSize: 12,
+                            lineHeight:
+                              1.4,
+                          }}
+                        >
+                          {
+                            suggestion.description
+                          }
+                        </span>
+                      </span>
+
+                      <span
+                        style={{
+                          color:
+                            "#94a3b8",
+                          fontSize: 18,
+                        }}
+                      >
+                        →
+                      </span>
+                    </button>
+                  )
+                )}
+
+                {user && !loadingHistory && historySuggestions.length > 0 && (
+                    <div
+                      style={{
+                        padding:
+                          "8px 14px",
+                        color:
+                          "#94a3b8",
+                        fontSize: 11,
+                        borderTop:
+                          "1px solid #f1f5f9",
+                      }}
+                    >
+                      🕘 {t.searchRecentSearchesHint}
+                    </div>
+                  )}
+              </div>
+            )}
+        </div>
+
+        <button
+          type="button"
+          onClick={startVoiceSearch}
+          aria-label={
+            listening
+              ? t.searchStopVoice
+              : t.searchStartVoice
+          }
+          style={{
+            border:
+              listening
+                ? "2px solid #dc2626"
+                : "1px solid #cbd5e1",
+            borderRadius: 12,
+            width: compact ? 48 : 58,
+            minWidth:
+              compact ? 48 : 58,
+            background:
+              listening
+                ? "#fee2e2"
+                : "#ffffff",
+            color:
+              listening
+                ? "#dc2626"
+                : "#003366",
+            fontSize:
+              compact ? 20 : 23,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent:
+              "center",
+          }}
+        >
+          {listening
+            ? "⏹"
+            : "🎤"}
+        </button>
+
+        <button
+          type="submit"
+          disabled={savingSearch}
+          style={{
+            border: "none",
+            borderRadius: 12,
+            padding: compact
+              ? "0 18px"
+              : "0 25px",
+            background:
+              savingSearch
+                ? "#64748b"
+                : "#003366",
+            color: "#fff",
+            fontWeight: 700,
+            cursor: savingSearch
+              ? "wait"
+              : "pointer",
+            whiteSpace:
+              "nowrap",
+          }}
+        >
+          {savingSearch
+            ? "..."
+            : t.searchButton}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

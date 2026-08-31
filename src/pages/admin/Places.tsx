@@ -227,7 +227,7 @@ function Places() {
                   </td>
 
                   <td style={{ padding: 14 }}>
-                    ⭐ {place.rating}
+                    â­ {place.rating}
                   </td>
 
                   <td style={{ padding: 14 }}>
@@ -243,13 +243,13 @@ function Places() {
                         target="_blank"
                         rel="noreferrer"
                       >
-                        👁 View
+                        ðŸ‘ View
                       </a>
 
                       <Link
                         to={`/admin/places/${place.id}`}
                       >
-                        ✏️ Edit
+                        âœï¸ Edit
                       </Link>
 
                       <button
@@ -264,7 +264,7 @@ function Places() {
                           fontWeight: 600,
                         }}
                       >
-                        🗑 Delete
+                        ðŸ—‘ Delete
                       </button>
                     </div>
                   </td>

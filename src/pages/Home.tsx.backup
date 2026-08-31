@@ -1,0 +1,622 @@
+﻿import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  Link,
+} from "react-router-dom";
+
+import Navbar from "../components/Navbar/Navbar";
+import EcosSearchBox from "@/components/ECOS/EcosSearchBox";
+
+import "./Home.css";
+
+type HomeCategory = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  search: string;
+};
+
+type QuickService = {
+  id: string;
+  name: string;
+  icon: string;
+  search: string;
+};
+
+const categories: HomeCategory[] = [
+  {
+    id: "government",
+    name: "Government",
+    description:
+      "Public services, offices and official information",
+    icon: "🏛️",
+    search: "government services",
+  },
+  {
+    id: "education",
+    name: "Education",
+    description:
+      "Schools, universities, courses and training",
+    icon: "🎓",
+    search: "education schools universities",
+  },
+  {
+    id: "jobs",
+    name: "Jobs",
+    description:
+      "Jobs, vacancies, internships and opportunities",
+    icon: "💼",
+    search: "jobs opportunities",
+  },
+  {
+    id: "housing",
+    name: "Housing",
+    description:
+      "Homes, apartments, land and property",
+    icon: "🏠",
+    search: "houses for rent in Bamenda",
+  },
+  {
+    id: "businesses",
+    name: "Businesses",
+    description:
+      "Discover businesses and local providers",
+    icon: "🏪",
+    search: "businesses in Bamenda",
+  },
+  {
+    id: "services",
+    name: "Services",
+    description:
+      "Everyday services and professionals",
+    icon: "⚙️",
+    search: "services in Bamenda",
+  },
+  {
+    id: "talent",
+    name: "Talent",
+    description:
+      "Find people who can get the job done",
+    icon: "🧑🏾‍🔧",
+    search: "professionals in Bamenda",
+  },
+  {
+    id: "tourism",
+    name: "Tourism",
+    description:
+      "Places to visit, explore and experience",
+    icon: "🌍",
+    search: "tourist places in Bamenda",
+  },
+  {
+    id: "food",
+    name: "Food",
+    description:
+      "Restaurants, food and local cuisine",
+    icon: "🍽️",
+    search: "restaurants and food in Bamenda",
+  },
+  {
+    id: "transport",
+    name: "Transport",
+    description:
+      "Taxis, bikes, vehicles and travel",
+    icon: "🚕",
+    search: "transport services in Bamenda",
+  },
+  {
+    id: "community",
+    name: "Community",
+    description:
+      "Groups, events and community activities",
+    icon: "🤝",
+    search: "community groups and events",
+  },
+];
+
+const quickServices: QuickService[] = [
+  {
+    id: "taxi",
+    name: "Taxi",
+    icon: "🚕",
+    search: "taxi in Bamenda",
+  },
+  {
+    id: "restaurants",
+    name: "Restaurants",
+    icon: "🍽️",
+    search: "restaurants in Bamenda",
+  },
+  {
+    id: "hotels",
+    name: "Hotels",
+    icon: "🏨",
+    search: "hotels in Bamenda",
+  },
+  {
+    id: "pharmacy",
+    name: "Pharmacy",
+    icon: "💊",
+    search: "pharmacy in Bamenda",
+  },
+  {
+    id: "mechanic",
+    name: "Mechanic",
+    icon: "🔧",
+    search: "mechanic in Bamenda",
+  },
+  {
+    id: "cleaning",
+    name: "Cleaning",
+    icon: "🧹",
+    search: "cleaning services in Bamenda",
+  },
+  {
+    id: "shopping",
+    name: "Shopping",
+    icon: "🛒",
+    search: "shopping in Bamenda",
+  },
+  {
+    id: "emergency",
+    name: "Emergency",
+    icon: "🚨",
+    search: "emergency services in Bamenda",
+  },
+];
+
+const CATEGORY_VISIBLE = 5;
+const QUICK_VISIBLE = 8;
+
+function Home() {
+  const [
+    categoryStart,
+    setCategoryStart,
+  ] = useState(0);
+
+  const [
+    quickStart,
+    setQuickStart,
+  ] = useState(0);
+
+  /*
+   * Automatically rotate the main category
+   * ecosystem every four seconds.
+   */
+  useEffect(() => {
+    const timer =
+      window.setInterval(() => {
+        setCategoryStart(
+          (current) =>
+            (current + 1) %
+            categories.length
+        );
+      }, 4000);
+
+    return () =>
+      window.clearInterval(timer);
+  }, []);
+
+  /*
+   * Automatically rotate Quick Access.
+   */
+  useEffect(() => {
+    const timer =
+      window.setInterval(() => {
+        setQuickStart(
+          (current) =>
+            (current + 1) %
+            quickServices.length
+        );
+      }, 3200);
+
+    return () =>
+      window.clearInterval(timer);
+  }, []);
+
+  const visibleCategories =
+    useMemo(() => {
+      return Array.from(
+        {
+          length: Math.min(
+            CATEGORY_VISIBLE,
+            categories.length
+          ),
+        },
+        (_, index) =>
+          categories[
+            (categoryStart + index) %
+              categories.length
+          ]
+      );
+    }, [categoryStart]);
+
+  const visibleQuickServices =
+    useMemo(() => {
+      return Array.from(
+        {
+          length: Math.min(
+            QUICK_VISIBLE,
+            quickServices.length
+          ),
+        },
+        (_, index) =>
+          quickServices[
+            (quickStart + index) %
+              quickServices.length
+          ]
+      );
+    }, [quickStart]);
+
+  function moveCategories(
+    direction: number
+  ) {
+    setCategoryStart(
+      (current) =>
+        (current +
+          direction +
+          categories.length) %
+        categories.length
+    );
+  }
+
+  function moveQuickServices(
+    direction: number
+  ) {
+    setQuickStart(
+      (current) =>
+        (current +
+          direction +
+          quickServices.length) %
+        quickServices.length
+    );
+  }
+
+  return (
+    <div className="home-page">
+      <Navbar />
+
+      <main className="home-content">
+
+        {/* =================================================
+            HERO
+        ================================================= */}
+
+        <section className="home-hero">
+
+          <div className="home-logo-watermark" />
+
+          <div className="home-hero-content">
+
+            <div className="home-eyebrow">
+              EVERYDAY CONNECT
+            </div>
+
+            <h1>
+              Making Everyday
+              <span>
+                Worth Living.
+              </span>
+            </h1>
+
+            <p className="home-hero-description">
+              Discover businesses, services,
+              opportunities, places and information
+              that make everyday life easier.
+            </p>
+
+            <div className="home-search">
+              <EcosSearchBox />
+            </div>
+
+            <div className="home-actions">
+
+              <Link
+                to="/businesses"
+                className="home-action"
+              >
+                <span>🏪</span>
+                Businesses
+              </Link>
+
+              <Link
+                to="/cleaning-services"
+                className="home-action"
+              >
+                <span>🧹</span>
+                Cleaning Services
+              </Link>
+
+              <Link
+                to="/register-business"
+                className="home-action"
+              >
+                <span>➕</span>
+                Register Your Business
+              </Link>
+
+            </div>
+
+          </div>
+        </section>
+
+
+        {/* =================================================
+            CATEGORY ECOSYSTEM
+        ================================================= */}
+
+        <section className="ecosystem-section">
+
+          <div className="section-heading">
+
+            <div>
+              <div className="section-eyebrow">
+                EVERYDAY CONNECT
+              </div>
+
+              <h2>
+                Explore Everything{" "}
+                <span>Around You</span>
+              </h2>
+
+              <p>
+                One connected place for the things
+                that matter in everyday life.
+              </p>
+            </div>
+
+            <div className="carousel-controls">
+
+              <button
+                type="button"
+                onClick={() =>
+                  moveCategories(-1)
+                }
+                aria-label="Previous categories"
+              >
+                ←
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  moveCategories(1)
+                }
+                aria-label="Next categories"
+              >
+                →
+              </button>
+
+            </div>
+
+          </div>
+
+
+          <div className="category-carousel">
+
+            {visibleCategories.map(
+              (category) => (
+                <Link
+                  key={category.id}
+                  to={`/search?search=${encodeURIComponent(
+                    category.search
+                  )}`}
+                  className="ecos-category-card"
+                >
+
+                  <div className="category-icon">
+                    {category.icon}
+                  </div>
+
+                  <h3>
+                    {category.name}
+                  </h3>
+
+                  <p>
+                    {category.description}
+                  </p>
+
+                  <span className="card-arrow">
+                    →
+                  </span>
+
+                </Link>
+              )
+            )}
+
+          </div>
+
+
+          <div className="carousel-dots">
+
+            {categories
+              .slice(0, 7)
+              .map(
+                (_, index) => (
+                  <button
+                    type="button"
+                    key={index}
+                    className={
+                      index ===
+                      categoryStart %
+                        7
+                        ? "active"
+                        : ""
+                    }
+                    onClick={() =>
+                      setCategoryStart(
+                        index
+                      )
+                    }
+                    aria-label={`Category group ${index + 1}`}
+                  />
+                )
+              )}
+
+          </div>
+
+
+          {/* =================================================
+              QUICK ACCESS
+          ================================================= */}
+
+          <div className="quick-access">
+
+            <div className="quick-heading">
+
+              <div>
+                <div className="section-eyebrow">
+                  QUICK ACCESS
+                </div>
+
+                <p>
+                  Popular everyday needs
+                </p>
+              </div>
+
+              <div className="quick-controls">
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    moveQuickServices(-1)
+                  }
+                  aria-label="Previous quick services"
+                >
+                  ←
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    moveQuickServices(1)
+                  }
+                  aria-label="Next quick services"
+                >
+                  →
+                </button>
+
+              </div>
+
+            </div>
+
+
+            <div className="quick-grid">
+
+              {visibleQuickServices.map(
+                (service) => (
+                  <Link
+                    key={service.id}
+                    to={`/search?search=${encodeURIComponent(
+                      service.search
+                    )}`}
+                    className="quick-card"
+                  >
+
+                    <span>
+                      {service.icon}
+                    </span>
+
+                    <strong>
+                      {service.name}
+                    </strong>
+
+                  </Link>
+                )
+              )}
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        {/* =================================================
+            ECOS
+        ================================================= */}
+
+        <section className="ecos-banner">
+
+          <div className="ecos-banner-content">
+
+            <div className="ecos-label">
+              ECOS
+            </div>
+
+            <h2>
+              Ask for anything.
+              <span>
+                We’ll help you find it.
+              </span>
+            </h2>
+
+            <p>
+              Search naturally. Businesses,
+              government services, education,
+              jobs, housing, transport, food,
+              tourism and more are connected
+              through Everyday Connect.
+            </p>
+
+            <Link
+              to="/search"
+              className="ecos-button"
+            >
+              Explore ECOS →
+            </Link>
+
+          </div>
+
+          <div className="ecos-banner-logo">
+            <img
+              src="/branding/everyday-connect-logo.png"
+              alt="Everyday Connect"
+            />
+          </div>
+
+        </section>
+
+
+        {/* =================================================
+            FOOTER
+        ================================================= */}
+
+        <footer className="home-footer">
+
+          <span>
+            © 2026 Everyday Connect.
+            All rights reserved.
+          </span>
+
+          <div>
+            <Link to="/contact">
+              Contact
+            </Link>
+
+            <Link to="/about">
+              About
+            </Link>
+
+            <Link to="/privacy">
+              Privacy
+            </Link>
+
+            <Link to="/terms">
+              Terms
+            </Link>
+          </div>
+
+        </footer>
+
+      </main>
+    </div>
+  );
+}
+
+export default Home;

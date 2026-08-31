@@ -1,4 +1,4 @@
-.register-business {
+﻿.register-business {
   max-width: 850px;
   margin: 60px auto;
   padding: 40px;
@@ -24,11 +24,30 @@
   gap: 15px;
 }
 
+.register-business label {
+  font-weight: 600;
+  color: var(--primary);
+}
+
 .register-business input,
-.register-business select {
+.register-business select,
+.register-business textarea {
   padding: 14px;
   border-radius: 8px;
   border: 1px solid #ccc;
+  font-family: inherit;
+  font-size: 15px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.register-business textarea {
+  resize: vertical;
+}
+
+.register-business input[type="file"] {
+  padding: 10px;
+  background: #fff;
 }
 
 .register-business button {
@@ -40,4 +59,83 @@
   border-radius: 10px;
   cursor: pointer;
   font-size: 16px;
+  font-weight: 600;
+}
+
+.register-business button:hover {
+  opacity: 0.92;
+}
+
+.register-business button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.business-location-map-wrapper {
+  width: 100%;
+  margin-top: 5px;
+}
+
+.business-location-map {
+  width: 100%;
+  height: 430px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #d7dce2;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+.business-location-map-help {
+  margin-top: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #f3f7fa;
+  color: #536273;
+  font-size: 14px;
+  text-align: center;
+}
+
+.location-status {
+  margin: 5px 0 !important;
+  padding: 12px;
+  border-radius: 8px;
+  background: #eef8ff;
+  color: #075985 !important;
+  font-size: 14px;
+}
+
+.location-accuracy {
+  margin: 0 !important;
+  color: #536273 !important;
+  font-size: 14px;
+}
+
+.location-warning {
+  padding: 14px;
+  border-radius: 9px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.location-confirmed {
+  margin: 5px 0 !important;
+  padding: 12px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #047857 !important;
+  font-weight: 600;
+}
+
+@media (max-width: 700px) {
+  .register-business {
+    margin: 20px 12px;
+    padding: 22px;
+  }
+
+  .business-location-map {
+    height: 360px;
+  }
 }

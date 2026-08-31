@@ -1,4 +1,4 @@
-import {
+﻿import {
   useEffect,
   useMemo,
   useState,
@@ -9,16 +9,14 @@ import { toast } from "react-toastify";
 
 type Review = {
   id: string;
-  place_id: string;
+  business_id: string;
   user_name: string;
   rating: number;
   comment: string;
   created_at: string;
 };
 
-interface BusinessReviewsProps {
-  placeId: string;
-}
+interface BusinessReviewsProps { businessId: string; }
 
 const MAX_COMMENT_LENGTH = 500;
 
@@ -44,8 +42,8 @@ function StarDisplay({
         whiteSpace: "nowrap",
       }}
     >
-      {"★".repeat(safeRating)}
-      {"☆".repeat(5 - safeRating)}
+      {"\u2605".repeat(safeRating)}
+      {"\u2606".repeat(5 - safeRating)}
     </span>
   );
 }
@@ -86,7 +84,7 @@ function StarPicker({
           }}
           
         >
-          ★
+          {"\u2605"}
         </button>
       ))}
     </div>
@@ -94,7 +92,7 @@ function StarPicker({
 }
 
 export default function BusinessReviews({
-  placeId,
+  businessId,
 }: BusinessReviewsProps) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,10 +120,10 @@ export default function BusinessReviews({
    */
 
   useEffect(() => {
-    if (!placeId) return;
+    if (!businessId) return;
 
     loadPageData();
-  }, [placeId]);
+  }, [businessId]);
 
   async function loadPageData() {
     await Promise.all([
@@ -175,9 +173,9 @@ export default function BusinessReviews({
       const { data, error } = await supabase
         .from("reviews")
         .select(
-          "id, place_id, user_name, rating, comment, created_at"
+          "id, business_id, user_name, rating, comment, created_at"
         )
-        .eq("place_id", placeId)
+        .eq("business_id", businessId)
         .order("created_at", {
           ascending: false,
         });
@@ -319,7 +317,7 @@ export default function BusinessReviews({
         await supabase
           .from("reviews")
           .select("id, user_name")
-          .eq("place_id", placeId)
+          .eq("business_id", businessId)
           .eq("user_name", reviewAuthorName)
           .limit(1);
 
@@ -338,7 +336,7 @@ export default function BusinessReviews({
         .from("reviews")
         .insert([
           {
-            place_id: placeId,
+            business_id: businessId,
             user_name: reviewAuthorName,
             rating,
             comment: cleanComment,
@@ -348,7 +346,7 @@ export default function BusinessReviews({
       if (error) throw error;
 
       toast.success(
-        "Thank you! Your review has been posted. ⭐"
+        "Thank you! Your review has been posted. 🎉"
       );
 
       setComment("");
@@ -624,7 +622,7 @@ export default function BusinessReviews({
             fontWeight: 800,
           }}
         >
-          ⭐ Reviews & Community Ratings
+          {"\u2605"}
         </h2>
 
         <p
@@ -674,7 +672,7 @@ export default function BusinessReviews({
           >
             {reviews.length
               ? averageRating.toFixed(1)
-              : "—"}
+              : "\u2014"}
           </div>
 
           <div style={{ marginTop: 8 }}>
@@ -730,7 +728,7 @@ export default function BusinessReviews({
                     fontWeight: 600,
                   }}
                 >
-                  {star} ★
+                  {star} {"\u2605"}
                 </span>
 
                 <div
@@ -787,7 +785,7 @@ export default function BusinessReviews({
             fontWeight: 700,
           }}
         >
-          ✍️ Write a Review
+          {"\u270D\uFE0F"} Write a Review
         </h3>
 
         {currentUser ? (
@@ -892,7 +890,7 @@ export default function BusinessReviews({
               >
                 {submitting
                   ? "Posting..."
-                  : "Post Review ⭐"}
+                  : "Post Review \u2192"}
               </button>
             </div>
           </form>
@@ -912,7 +910,7 @@ export default function BusinessReviews({
                 fontWeight: 600,
               }}
             >
-              🔐 Log in to write a review
+              {"\uD83D\uDD0D"}
             </p>
 
             <p
@@ -940,7 +938,7 @@ export default function BusinessReviews({
             marginBottom: 16,
           }}
         >
-          💬 Recent Feedback
+          {"\uD83D\uDCAC"} Recent Feedback
         </h3>
 
         {loading ? (
@@ -971,7 +969,7 @@ export default function BusinessReviews({
                 marginBottom: 8,
               }}
             >
-              ⭐
+              {"\u2605"}
             </div>
 
             <strong>No reviews yet</strong>
@@ -1222,7 +1220,7 @@ export default function BusinessReviews({
                               padding: 0,
                             }}
                           >
-                            ✏️ Edit Review
+                            {"\u270D\uFE0F"} Edit Review
                           </button>
                         )}
 
@@ -1258,8 +1256,8 @@ export default function BusinessReviews({
                           review.id
                             ? "Deleting..."
                             : isAdmin
-                            ? "🗑 Delete Review"
-                            : "🗑 Delete My Review"}
+                            ? "\uD83D\uDDD1\uFE0F Delete Review"
+                            : "\uD83D\uDDD1\uFE0F Delete My Review"}
                         </button>
                       )}
                     </div>

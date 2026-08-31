@@ -7,64 +7,100 @@ import BusinessGallery from "../components/Business/BusinessGallery";
 import BusinessServices from "../components/Business/BusinessServices";
 import BusinessReviews from "../components/Admin/BusinessReviews";
 
-type Place = {
+type Business = {
   id: string;
-  name: string;
-  owner?: string;
-  category?: string;
-  description?: string;
+  name?: string | null;
+  owner?: string | null;
+  category?: string | null;
+  subcategory?: string | null;
+  description?: string | null;
+  about?: string | null;
 
-  phone?: string;
-  whatsapp?: string;
-  email?: string;
-  website?: string;
+  phone?: string | null;
+  whatsapp?: string | null;
+  email?: string | null;
+  website?: string | null;
 
-  city?: string;
-  area?: string;
-  landmark?: string;
+  area?: string | null;
+  landmark?: string | null;
+  address?: string | null;
+  city?: string | null;
 
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
 
-  logo?: string;
-  image?: string;
-  cover_image?: string;
+  logo?: string | null;
+  cover_image?: string | null;
 
-  verified?: boolean;
-  featured?: boolean;
+  verified?: boolean | string | null;
+  featured?: boolean | string | null;
 
-  rating?: number;
+  rating?: number | string | null;
+  total_reviews?: number | string | null;
+
+  slogan?: string | null;
+  opening_hours?: string | null;
+  price_range?: string | null;
 };
+
+function asBoolean(value: unknown): boolean {
+  if (value === true) return true;
+
+  if (typeof value === "string") {
+    return ["true", "1", "yes", "verified"].includes(
+      value.trim().toLowerCase()
+    );
+  }
+
+  if (typeof value === "number") {
+    return value === 1;
+  }
+
+  return false;
+}
+
+function asNumber(value: unknown): number {
+  const number = Number(value);
+
+  return Number.isFinite(number) ? number : 0;
+}
 
 export default function BusinessProfile() {
   const { id } = useParams<{ id: string }>();
 
-  const [place, setPlace] = useState<Place | null>(null);
+  const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!id) return;
-
-    loadBusiness();
-  }, [id]);
-
-  async function loadBusiness() {
-    setLoading(true);
-
-    const { data, error } = await supabase
-      .from("places")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (error) {
-      setError(error.message);
-      console.error(error);
-    } else {
-      setPlace(data);
+    if (!id) {
+      setError("No business ID was provided.");
+      setLoading(false);
+      return;
     }
 
+    loadBusiness(id);
+  }, [id]);
+
+  async function loadBusiness(businessId: string) {
+    setLoading(true);
+    setError("");
+
+    const { data, error: databaseError } = await supabase
+      .from("business")
+      .select("*")
+      .eq("id", businessId)
+      .single();
+
+    if (databaseError) {
+      console.error("Business profile error:", databaseError);
+      setError(databaseError.message);
+      setBusiness(null);
+      setLoading(false);
+      return;
+    }
+
+    setBusiness(data as Business);
     setLoading(false);
   }
 
@@ -88,12 +124,20 @@ export default function BusinessProfile() {
         style={{
           maxWidth: 800,
           margin: "80px auto",
+          padding: 20,
           textAlign: "center",
         }}
       >
         <h2>Unable to load business</h2>
 
-        <p>{error}</p>
+        <p
+          style={{
+            color: "#b91c1c",
+            wordBreak: "break-word",
+          }}
+        >
+          {error}
+        </p>
 
         <Link to="/businesses">
           ← Back to Businesses
@@ -102,7 +146,7 @@ export default function BusinessProfile() {
     );
   }
 
-  if (!place) {
+  if (!business) {
     return (
       <div
         style={{
@@ -113,21 +157,32 @@ export default function BusinessProfile() {
         <h2>Business not found</h2>
 
         <Link to="/businesses">
-          ← Back
+          ← Back to Businesses
         </Link>
       </div>
     );
   }
 
+  const verified = asBoolean(business.verified);
+  const featured = asBoolean(business.featured);
+  const rating = asNumber(business.rating);
+  const totalReviews = asNumber(business.total_reviews);
+
   const cover =
-    place.cover_image ||
-    place.image ||
-    "https://placehold.co/1400x350?text=Business+Cover";
+    business.cover_image ||
+    "https://placehold.co/1400x350?text=Everyday+Connect";
 
   const logo =
-    place.logo ||
-    place.image ||
-    "https://placehold.co/150?text=Logo";
+    business.logo ||
+    "https://placehold.co/150x150?text=Business";
+
+  const location = [
+    business.city,
+    business.area,
+    business.address,
+  ]
+    .filter(Boolean)
+    .join(" • ");
 
   return (
     <div
@@ -137,15 +192,26 @@ export default function BusinessProfile() {
         paddingBottom: 80,
       }}
     >
+      <Link
+        to="/businesses"
+        style={{
+          display: "inline-block",
+          margin: "20px",
+        }}
+      >
+        ← Back to Businesses
+      </Link>
+
       {/* COVER */}
 
       <img
         src={cover}
-        alt={place.name}
+        alt={business.name || "Business cover"}
         style={{
           width: "100%",
           height: 320,
           objectFit: "cover",
+          display: "block",
         }}
       />
 
@@ -160,7 +226,7 @@ export default function BusinessProfile() {
       >
         <img
           src={logo}
-          alt={place.name}
+          alt={business.name || "Business logo"}
           style={{
             width: 150,
             height: 150,
@@ -171,15 +237,29 @@ export default function BusinessProfile() {
           }}
         />
 
-        <h1>{place.name}</h1>
+        <h1>{business.name || "Unnamed Business"}</h1>
+
+        {business.slogan && (
+          <p
+            style={{
+              color: "#64748b",
+              fontStyle: "italic",
+            }}
+          >
+            {business.slogan}
+          </p>
+        )}
 
         <p
           style={{
             color: "#666",
-            marginTop: -8,
+            marginTop: 8,
           }}
         >
-          {place.category}
+          {business.category || "Business"}
+          {business.subcategory
+            ? ` • ${business.subcategory}`
+            : ""}
         </p>
 
         <div
@@ -191,7 +271,7 @@ export default function BusinessProfile() {
             marginTop: 10,
           }}
         >
-          {place.verified && (
+          {verified && (
             <span
               style={{
                 background: "#DCFCE7",
@@ -205,7 +285,7 @@ export default function BusinessProfile() {
             </span>
           )}
 
-          {place.featured && (
+          {featured && (
             <span
               style={{
                 background: "#FEF3C7",
@@ -227,18 +307,30 @@ export default function BusinessProfile() {
             fontWeight: 700,
           }}
         >
-          ⭐ {place.rating ?? 0}
+          ⭐ {rating.toFixed(1)}
+          {totalReviews > 0 && (
+            <span
+              style={{
+                fontSize: 14,
+                color: "#64748b",
+                marginLeft: 8,
+                fontWeight: 400,
+              }}
+            >
+              ({totalReviews} reviews)
+            </span>
+          )}
         </div>
 
-        {/* BUSINESS ACTIONS */}
+        {/* ACTIONS */}
 
         <div style={{ marginTop: 25 }}>
           <BusinessActions
-            phone={place.phone}
-            whatsapp={place.whatsapp}
-            website={place.website}
-            latitude={place.latitude}
-            longitude={place.longitude}
+            phone={business.phone || undefined}
+            whatsapp={business.whatsapp || undefined}
+            website={business.website || undefined}
+            latitude={business.latitude ?? undefined}
+            longitude={business.longitude ?? undefined}
           />
         </div>
       </div>
@@ -259,9 +351,12 @@ export default function BusinessProfile() {
         <p
           style={{
             lineHeight: 1.8,
+            whiteSpace: "pre-wrap",
           }}
         >
-          {place.description || "No description available."}
+          {business.about ||
+            business.description ||
+            "No description available."}
         </p>
 
         <hr style={{ margin: "30px 0" }} />
@@ -274,34 +369,41 @@ export default function BusinessProfile() {
             gap: 25,
           }}
         >
-          {place.phone && (
+          {business.owner && (
+            <div>
+              <strong>👤 Owner</strong>
+              <p>{business.owner}</p>
+            </div>
+          )}
+
+          {business.phone && (
             <div>
               <strong>📞 Phone</strong>
-              <p>{place.phone}</p>
+              <p>{business.phone}</p>
             </div>
           )}
 
-          {place.whatsapp && (
+          {business.whatsapp && (
             <div>
               <strong>💬 WhatsApp</strong>
-              <p>{place.whatsapp}</p>
+              <p>{business.whatsapp}</p>
             </div>
           )}
 
-          {place.email && (
+          {business.email && (
             <div>
               <strong>📧 Email</strong>
-              <p>{place.email}</p>
+              <p>{business.email}</p>
             </div>
           )}
 
-          {place.website && (
+          {business.website && (
             <div>
               <strong>🌐 Website</strong>
 
               <p>
                 <a
-                  href={place.website}
+                  href={business.website}
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -311,45 +413,47 @@ export default function BusinessProfile() {
             </div>
           )}
 
-          {(place.city || place.area) && (
+          {location && (
             <div>
               <strong>📍 Location</strong>
-
-              <p>
-                {place.city}
-                {place.city && place.area ? " • " : ""}
-                {place.area}
-              </p>
+              <p>{location}</p>
             </div>
           )}
 
-          {place.landmark && (
+          {business.landmark && (
             <div>
               <strong>📌 Landmark</strong>
+              <p>{business.landmark}</p>
+            </div>
+          )}
 
-              <p>{place.landmark}</p>
+          {business.opening_hours && (
+            <div>
+              <strong>🕒 Opening Hours</strong>
+              <p>{business.opening_hours}</p>
+            </div>
+          )}
+
+          {business.price_range && (
+            <div>
+              <strong>💰 Price Range</strong>
+              <p>{business.price_range}</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* BUSINESS GALLERY */}
+      {/* GALLERY */}
 
-      <div style={{ marginTop: 40 }}>
-        <BusinessGallery placeId={place.id} />
-      </div>
+      <BusinessGallery businessId={business.id} />
 
       {/* SERVICES */}
 
-      <div style={{ marginTop: 40 }}>
-        <BusinessServices placeId={place.id} />
-      </div>
+      <BusinessServices businessId={business.id} />
 
       {/* REVIEWS */}
 
-      <div style={{ marginTop: 40 }}>
-        <BusinessReviews placeId={place.id} />
-      </div>
+      <BusinessReviews businessId={business.id} />
     </div>
   );
 }

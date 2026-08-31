@@ -1,0 +1,1377 @@
+﻿import { supabase } from "../../lib/supabase";
+
+import { resolveIntent } from "./IntentResolver";
+import { resolveAction } from "./ActionResolver";
+import {
+  buildEcosAnswer,
+} from "./AnswerBuilder";
+
+import type {
+  EcosIntent,
+  EcosSearchResponse,
+  EcosSearchResult,
+  EcosWebReference,
+} from "./SearchTypes";
+
+type BusinessRow = {
+  id: string;
+  name?: string | null;
+  category?: string | null;
+  subcategory?: string | null;
+  description?: string | null;
+  about?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  area?: string | null;
+  address?: string | null;
+  landmark?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  verified?: boolean | string | null;
+  rating?: number | string | null;
+  logo?: string | null;
+  cover_image?: string | null;
+};
+
+type PlaceRow = {
+  id: string;
+  name: string;
+  category?: string | null;
+  description?: string | null;
+  history?: string | null;
+  address?: string | null;
+  city?: string | null;
+  subdivision?: string | null;
+  division?: string | null;
+  region?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  verified?: boolean | null;
+  rating?: number | null;
+  image?: string | null;
+  cover_image?: string | null;
+};
+
+type WebSearchResponse = {
+  query?: string;
+  searchedWeb?: boolean;
+  results?: EcosWebReference[];
+};
+
+const PAGE_SIZE = 8;
+
+/*
+ * Supabase/PostgREST normally allows large ranges,
+ * but using batches keeps each request manageable.
+ *
+ * IMPORTANT:
+ * This is NOT a result limit.
+ * The code keeps requesting additional batches
+ * until there are no more records.
+ */
+const DATABASE_BATCH_SIZE = 1000;
+
+const STOP_WORDS = new Set([
+  "the",
+  "a",
+  "an",
+  "in",
+  "on",
+  "at",
+  "for",
+  "to",
+  "of",
+  "and",
+  "or",
+  "with",
+  "near",
+  "me",
+  "my",
+  "is",
+  "are",
+  "can",
+  "i",
+  "where",
+  "what",
+  "who",
+  "how",
+  "do",
+  "does",
+  "find",
+  "please",
+  "show",
+  "get",
+  "give",
+  "some",
+]);
+
+const RECOMMENDATION_WORDS = new Set([
+  "best",
+  "top",
+  "better",
+  "recommended",
+  "recommend",
+  "recommendation",
+  "popular",
+  "trusted",
+  "reliable",
+  "good",
+]);
+
+function normalize(
+  value: unknown
+): string {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function queryWords(
+  query: string
+): string[] {
+  return normalize(query)
+    .replace(
+      /[^\p{L}\p{N}\s-]/gu,
+      " "
+    )
+    .split(/\s+/)
+    .filter(
+      (word) =>
+        word.length >= 2 &&
+        !STOP_WORDS.has(word)
+    );
+}
+
+function hasRecommendationIntent(
+  query: string
+): boolean {
+  return queryWords(query).some(
+    (word) =>
+      RECOMMENDATION_WORDS.has(word)
+  );
+}
+
+function searchScore(
+  query: string,
+  fields: string[]
+): number {
+  const q =
+    normalize(query);
+
+  if (!q) {
+    return 0;
+  }
+
+  const words =
+    queryWords(q);
+
+  let score = 0;
+
+  for (
+    let index = 0;
+    index < fields.length;
+    index++
+  ) {
+    const value =
+      normalize(fields[index]);
+
+    if (!value) {
+      continue;
+    }
+
+    const fieldWeight =
+      Math.max(
+        1,
+        8 - index
+      );
+
+    /*
+     * Exact field match gets the strongest score.
+     */
+    if (value === q) {
+      score +=
+        120 * fieldWeight;
+    }
+
+    /*
+     * Full query appearing inside a field.
+     */
+    if (value.includes(q)) {
+      score +=
+        60 * fieldWeight;
+    }
+
+    /*
+     * Individual query words.
+     */
+    for (const word of words) {
+      if (value.includes(word)) {
+        score +=
+          12 * fieldWeight;
+      }
+    }
+  }
+
+  return score;
+}
+
+function isVerified(
+  value: unknown
+): boolean {
+  if (value === true) {
+    return true;
+  }
+
+  if (
+    typeof value ===
+    "string"
+  ) {
+    return [
+      "true",
+      "1",
+      "yes",
+      "verified",
+    ].includes(
+      value.toLowerCase()
+    );
+  }
+
+  return false;
+}
+
+function qualityBonus(
+  result: EcosSearchResult,
+  query: string
+): number {
+  let bonus = 0;
+
+  if (result.verified) {
+    bonus += 20;
+  }
+
+  const rating =
+    Number(result.rating) || 0;
+
+  if (rating > 0) {
+    bonus +=
+      Math.min(
+        rating,
+        5
+      ) * 3;
+  }
+
+  if (
+    hasRecommendationIntent(
+      query
+    )
+  ) {
+    if (result.verified) {
+      bonus += 15;
+    }
+
+    bonus +=
+      Math.min(
+        rating,
+        5
+      ) * 4;
+  }
+
+  return bonus;
+}
+
+function businessResult(
+  query: string,
+  row: BusinessRow
+): EcosSearchResult {
+  const score =
+    searchScore(
+      query,
+      [
+        row.name || "",
+        row.category || "",
+        row.subcategory || "",
+        row.description || "",
+        row.about || "",
+        row.area || "",
+        row.address || "",
+        row.landmark || "",
+      ]
+    );
+
+  return {
+    id: row.id,
+
+    type: "business",
+
+    name:
+      row.name ||
+      "Unnamed business",
+
+    category:
+      row.subcategory
+        ? `${row.category || "Business"} â€¢ ${row.subcategory}`
+        : row.category,
+
+    description:
+      row.description ||
+      row.about,
+
+    address:
+      row.address,
+
+    area:
+      row.area,
+
+    city:
+      undefined,
+
+    phone:
+      row.phone,
+
+    website:
+      row.website,
+
+    latitude:
+      row.latitude,
+
+    longitude:
+      row.longitude,
+
+    verified:
+      isVerified(
+        row.verified
+      ),
+
+    rating:
+      Number(
+        row.rating
+      ) || 0,
+
+    image:
+      row.logo ||
+      row.cover_image,
+
+    url:
+      `/business/${row.id}`,
+
+    score,
+  };
+}
+
+function placeResult(
+  query: string,
+  row: PlaceRow
+): EcosSearchResult {
+  const score =
+    searchScore(
+      query,
+      [
+        row.name,
+        row.category || "",
+        row.description || "",
+        row.history || "",
+        row.address || "",
+        row.city || "",
+        row.subdivision || "",
+        row.division || "",
+        row.region || "",
+      ]
+    );
+
+  return {
+    id: row.id,
+
+    type: "place",
+
+    name:
+      row.name,
+
+    category:
+      row.category,
+
+    description:
+      row.description,
+
+    address:
+      row.address,
+
+    city:
+      row.city,
+
+    latitude:
+      row.latitude,
+
+    longitude:
+      row.longitude,
+
+    verified:
+      row.verified,
+
+    rating:
+      Number(
+        row.rating
+      ) || 0,
+
+    image:
+      row.image ||
+      row.cover_image,
+
+    url:
+      `/place/${row.id}`,
+
+    score,
+  };
+}
+
+/*
+ * =========================================================
+ * FETCH ALL DATABASE RECORDS IN BATCHES
+ * =========================================================
+ *
+ * This removes the old artificial 100-record ceiling.
+ *
+ * We still fetch in manageable chunks so we do not try
+ * to download the whole database in one HTTP request.
+ */
+
+async function fetchAllBusinesses(): Promise<BusinessRow[]> {
+  const allRows: BusinessRow[] = [];
+
+  let start = 0;
+
+  while (true) {
+    const end =
+      start +
+      DATABASE_BATCH_SIZE -
+      1;
+
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("business")
+      .select(`
+        id,
+        name,
+        category,
+        subcategory,
+        description,
+        about,
+        phone,
+        website,
+        area,
+        address,
+        landmark,
+        latitude,
+        longitude,
+        verified,
+        rating,
+        logo,
+        cover_image
+      `)
+      .range(
+        start,
+        end
+      );
+
+    if (error) {
+      console.error(
+        "ECOS business search error:",
+        error
+      );
+
+      break;
+    }
+
+    const rows =
+      (data || []) as BusinessRow[];
+
+    allRows.push(
+      ...rows
+    );
+
+    /*
+     * If fewer than the batch size came back,
+     * we have reached the end.
+     */
+    if (
+      rows.length <
+      DATABASE_BATCH_SIZE
+    ) {
+      break;
+    }
+
+    start +=
+      DATABASE_BATCH_SIZE;
+  }
+
+  return allRows;
+}
+
+async function fetchAllPlaces(): Promise<PlaceRow[]> {
+  const allRows: PlaceRow[] = [];
+
+  let start = 0;
+
+  while (true) {
+    const end =
+      start +
+      DATABASE_BATCH_SIZE -
+      1;
+
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("places")
+      .select(`
+        id,
+        name,
+        category,
+        description,
+        history,
+        address,
+        city,
+        subdivision,
+        division,
+        region,
+        latitude,
+        longitude,
+        verified,
+        rating,
+        image,
+        cover_image
+      `)
+      .range(
+        start,
+        end
+      );
+
+    if (error) {
+      console.error(
+        "ECOS places search error:",
+        error
+      );
+
+      break;
+    }
+
+    const rows =
+      (data || []) as PlaceRow[];
+
+    allRows.push(
+      ...rows
+    );
+
+    if (
+      rows.length <
+      DATABASE_BATCH_SIZE
+    ) {
+      break;
+    }
+
+    start +=
+      DATABASE_BATCH_SIZE;
+  }
+
+  return allRows;
+}
+
+/*
+ * =========================================================
+ * WEB SEARCH
+ * =========================================================
+ */
+
+async function searchWeb(
+  query: string,
+  localResultCount: number
+): Promise<EcosWebReference[]> {
+  try {
+    const functionUrl =
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ecos-web-search`;
+
+    const response =
+      await fetch(
+        functionUrl,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            apikey:
+              import.meta.env
+                .VITE_SUPABASE_ANON_KEY,
+          },
+
+          body:
+            JSON.stringify({
+              query,
+              localResultCount,
+            }),
+        }
+      );
+
+    if (!response.ok) {
+      console.error(
+        "ECOS web search request failed:",
+        response.status
+      );
+
+      return [];
+    }
+
+    const payload =
+      (await response.json()) as WebSearchResponse;
+
+    if (
+      !Array.isArray(
+        payload.results
+      )
+    ) {
+      return [];
+    }
+
+    return payload.results
+      .filter(
+        (item) =>
+          Boolean(
+            item?.title &&
+            item?.url
+          )
+      )
+      .map(
+        (item) => ({
+          title:
+            String(
+              item.title
+            ),
+
+          url:
+            String(
+              item.url
+            ),
+
+          snippet:
+            item.snippet
+              ? String(
+                  item.snippet
+                )
+              : undefined,
+
+          source:
+            item.source
+              ? String(
+                  item.source
+                )
+              : undefined,
+        })
+      );
+  } catch (error) {
+    console.error(
+      "ECOS web search error:",
+      error
+    );
+
+    return [];
+  }
+}
+
+/*
+ * =========================================================
+ * RANK RESULTS
+ * =========================================================
+ */
+
+function intentRelevanceBonus(
+  result: EcosSearchResult,
+  intent: EcosIntent,
+  query: string
+): number {
+  const text = normalize(
+    [
+      result.name,
+      result.category,
+      result.description,
+      result.address,
+      result.area,
+      result.city,
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+  if (!text) {
+    return 0;
+  }
+
+  let bonus = 0;
+
+  /*
+   * =======================================================
+   * INTENT-AWARE RANKING
+   * =======================================================
+   *
+   * ECOS understands what the user is looking for first,
+   * then gives matching records a ranking advantage.
+   *
+   * This does NOT hide other relevant results.
+   */
+
+  const intentTerms: Record<EcosIntent, string[]> = {
+    government: [
+      "government",
+      "ministry",
+      "public",
+      "immigration",
+      "passport",
+      "tax",
+      "municipality",
+      "council",
+      "administration",
+      "certificate",
+      "permit",
+      "license",
+      "licence",
+    ],
+
+    education: [
+      "school",
+      "university",
+      "college",
+      "education",
+      "academy",
+      "training",
+      "course",
+      "institution",
+      "student",
+      "teacher",
+      "scholarship",
+    ],
+
+    housing: [
+      "house",
+      "home",
+      "property",
+      "apartment",
+      "flat",
+      "rent",
+      "rental",
+      "land",
+      "plot",
+      "estate",
+      "housing",
+    ],
+
+    jobs: [
+      "job",
+      "jobs",
+      "employment",
+      "career",
+      "vacancy",
+      "vacancies",
+      "recruitment",
+      "hiring",
+      "internship",
+      "work",
+    ],
+
+    talent: [
+      "carpenter",
+      "builder",
+      "plumber",
+      "electrician",
+      "mechanic",
+      "tailor",
+      "designer",
+      "developer",
+      "photographer",
+      "cleaner",
+      "driver",
+      "technician",
+      "professional",
+      "freelancer",
+      "artisan",
+      "repair",
+    ],
+
+    tourism: [
+      "tourist",
+      "tourism",
+      "attraction",
+      "landmark",
+      "palace",
+      "museum",
+      "culture",
+      "heritage",
+      "waterfall",
+      "mountain",
+      "park",
+      "festival",
+    ],
+
+    food: [
+      "food",
+      "restaurant",
+      "meal",
+      "cuisine",
+      "bar",
+      "cafe",
+      "coffee",
+      "bakery",
+      "pizza",
+      "chicken",
+      "snack",
+    ],
+
+    transport: [
+      "taxi",
+      "bike",
+      "motorbike",
+      "transport",
+      "driver",
+      "bus",
+      "travel",
+      "rental",
+      "vehicle",
+      "motorcycle",
+    ],
+
+    community: [
+      "community",
+      "event",
+      "group",
+      "church",
+      "association",
+      "meeting",
+      "organization",
+      "organisation",
+    ],
+
+    service: [
+      "service",
+      "services",
+      "cleaning",
+      "wash",
+      "repair",
+      "booking",
+      "hotel",
+      "installation",
+      "maintenance",
+    ],
+
+    discover: [],
+
+    unknown: [],
+    location: [],
+  };
+
+  const terms =
+    intentTerms[intent] || [];
+
+  for (const term of terms) {
+    if (text.includes(term)) {
+      bonus += 18;
+    }
+  }
+
+  /*
+   * Exact query words receive an additional contextual
+   * advantage when they belong to the detected intent.
+   */
+  const words = queryWords(query);
+
+  for (const word of words) {
+    if (
+      word.length >= 3 &&
+      text.includes(word)
+    ) {
+      bonus += 4;
+    }
+  }
+
+  return bonus;
+}
+
+function rankResults(
+  results: EcosSearchResult[],
+  query: string,
+  intent: EcosIntent
+): EcosSearchResult[] {
+  return results
+    .map(
+      (result) => ({
+        ...result,
+
+        score:
+          result.score +
+          qualityBonus(
+            result,
+            query
+          ) +
+          intentRelevanceBonus(
+            result,
+            intent,
+            query
+          ),
+      })
+    )
+    .sort(
+      (a, b) => {
+        if (
+          b.score !==
+          a.score
+        ) {
+          return (
+            b.score -
+            a.score
+          );
+        }
+
+        /*
+         * Stable alphabetical fallback.
+         */
+        return a.name.localeCompare(
+          b.name
+        );
+      }
+    );
+}
+
+/*
+ * =========================================================
+ * REMOVE DUPLICATES
+ * =========================================================
+ */
+
+function deduplicateResults(
+  results: EcosSearchResult[]
+): EcosSearchResult[] {
+  const seen =
+    new Set<string>();
+
+  return results.filter(
+    (result) => {
+      const name =
+        normalize(
+          result.name
+        );
+
+      const address =
+        normalize(
+          result.address
+        );
+
+      const key =
+        `${result.type}|${name}|${address}`;
+
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+
+      return true;
+    }
+  );
+}
+
+/*
+ * =========================================================
+ * EMPTY RESPONSE
+ * =========================================================
+ */
+
+function emptyResponse(
+  query = ""
+): EcosSearchResponse {
+  return {
+    query,
+
+    intent:
+      "unknown",
+
+    action: resolveAction(query),
+
+    answer:
+      buildEcosAnswer(
+        query,
+        "unknown",
+        [],
+        0
+      ),
+
+    results: [],
+
+    webReferences: [],
+
+    totalLocalResults: 0,
+
+    displayedLocalResults: 0,
+
+    totalWebResults: 0,
+
+    displayedWebResults: 0,
+
+    hasMoreLocalResults:
+      false,
+
+    hasMoreWebResults:
+      false,
+
+    page: 1,
+
+    pageSize:
+      PAGE_SIZE,
+
+    searchedAt:
+      new Date().toISOString(),
+
+    source:
+      "everyday-connect",
+  };
+}
+
+/*
+ * =========================================================
+ * MAIN ECOS SEARCH
+ * =========================================================
+ */
+
+export async function searchEverydayConnect(
+  query: string,
+  page = 1
+): Promise<EcosSearchResponse> {
+  const cleanQuery =
+    normalize(query);
+
+  if (!cleanQuery) {
+    return emptyResponse();
+  }
+
+  const intent:
+    EcosIntent =
+    resolveIntent(
+      cleanQuery
+    );
+    /*
+     * =======================================================
+     * ECOS ACTION RESOLUTION
+     * =======================================================
+     *
+     * Action requests must be handled BEFORE any database
+     * or web search.
+     *
+     * Examples:
+     *
+     * "I want to manage my business"
+     * "I want my business registered"
+     * "I want to book a car wash"
+     */
+
+    const action =
+      resolveAction(
+        cleanQuery,
+        intent
+      );
+
+    console.log(
+      "ECOS ACTION RESOLVED:",
+      {
+        query: cleanQuery,
+        intent,
+        action: resolveAction(cleanQuery, intent),
+      }
+    );
+
+    /*
+     * =======================================================
+     * EARLY ACTION RETURN
+     * =======================================================
+     *
+     * These requests are application commands, not searches.
+     */
+
+    if (
+      action === "manage" ||
+      action === "register" ||
+      action === "book"
+    ) {
+
+      console.log(
+        "ECOS ACTION REQUEST - STOPPING SEARCH:",
+        action
+      );
+
+      return {
+        query:
+          cleanQuery,
+
+        intent,
+
+        action: resolveAction(cleanQuery, intent),
+
+        answer:
+          "",
+
+        results:
+          [],
+
+        webReferences:
+          [],
+
+        totalLocalResults:
+          0,
+
+        displayedLocalResults:
+          0,
+
+        totalWebResults:
+          0,
+
+        displayedWebResults:
+          0,
+
+        hasMoreLocalResults:
+          false,
+
+        hasMoreWebResults:
+          false,
+
+        page:
+          1,
+
+        pageSize:
+          PAGE_SIZE,
+
+        searchedAt:
+          new Date().toISOString(),
+
+        source:
+          "everyday-connect",
+      };
+    }
+
+
+  /*
+   * -------------------------------------------------------
+   * FETCH THE COMPLETE LOCAL DATASET
+   * -------------------------------------------------------
+   *
+   * Businesses and places are fetched independently,
+   * then combined into ONE ECOS result pool.
+   */
+
+  const [
+    businessRows,
+    placeRows,
+  ] =
+    await Promise.all([
+      fetchAllBusinesses(),
+      fetchAllPlaces(),
+    ]);
+
+  /*
+   * -------------------------------------------------------
+   * CONVERT TO ECOS RESULTS
+   * -------------------------------------------------------
+   */
+
+  const businesses =
+    businessRows.map(
+      (row) =>
+        businessResult(
+          cleanQuery,
+          row
+        )
+    );
+
+  const places =
+    placeRows.map(
+      (row) =>
+        placeResult(
+          cleanQuery,
+          row
+        )
+    );
+
+  /*
+   * -------------------------------------------------------
+   * COMBINE BUSINESSES + PLACES
+   * -------------------------------------------------------
+   */
+
+  let allLocalResults =
+    [
+      ...businesses,
+      ...places,
+    ];
+
+  /*
+   * Only actual matches remain.
+   */
+  allLocalResults =
+    allLocalResults.filter(
+      (result) =>
+        result.score > 0
+    );
+
+  /*
+   * Remove duplicate-looking records.
+   */
+  allLocalResults =
+    deduplicateResults(
+      allLocalResults
+    );
+
+  /*
+   * Rank the COMPLETE matching pool.
+   *
+   * This is important:
+   * pagination happens AFTER ranking.
+   *
+   * Therefore page 2 contains the next-best
+   * results, not just the next database rows.
+   */
+  allLocalResults =
+    rankResults(
+      allLocalResults,
+      cleanQuery,
+      intent
+    );
+
+  /*
+   * -------------------------------------------------------
+   * PAGINATION
+   * -------------------------------------------------------
+   */
+
+  const safePage =
+    Math.max(
+      1,
+      Math.floor(page) || 1
+    );
+
+  const start =
+    (safePage - 1) *
+    PAGE_SIZE;
+
+  const end =
+    start +
+    PAGE_SIZE;
+
+  const pageResults =
+    allLocalResults.slice(
+      start,
+      end
+    );
+
+  /*
+   * -------------------------------------------------------
+   * COUNTS
+   * -------------------------------------------------------
+   */
+
+  const totalLocalResults =
+    allLocalResults.length;
+
+  const displayedLocalResults =
+    pageResults.length;
+
+  const hasMoreLocalResults =
+    end <
+    totalLocalResults;
+
+  /*
+   * -------------------------------------------------------
+   * WEB SEARCH
+   * -------------------------------------------------------
+   *
+   * Web search remains independent from local results.
+   * We don't claim that this number represents the entire
+   * internet.
+   */
+
+  const webReferences =
+    await searchWeb(
+      cleanQuery,
+      totalLocalResults
+    );
+
+  const totalWebResults =
+    webReferences.length;
+
+  const displayedWebResults =
+    webReferences.length;
+
+  /*
+   * -------------------------------------------------------
+   * RESPONSE
+   * -------------------------------------------------------
+   */
+
+  return {
+    query:
+      cleanQuery,
+
+    intent,
+
+    action,
+
+    answer:
+      buildEcosAnswer(
+        cleanQuery,
+        intent,
+        pageResults,
+        totalWebResults
+      ),
+
+    results:
+      pageResults,
+
+    webReferences,
+
+    totalLocalResults,
+
+    displayedLocalResults,
+
+    totalWebResults,
+
+    displayedWebResults,
+
+    hasMoreLocalResults,
+
+    hasMoreWebResults:
+      false,
+
+    page:
+      safePage,
+
+    pageSize:
+      PAGE_SIZE,
+
+    searchedAt:
+      new Date().toISOString(),
+
+    source:
+      "everyday-connect",
+  };
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

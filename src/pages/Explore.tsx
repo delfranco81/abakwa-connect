@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import Navbar from "../components/Navbar/Navbar";
 import FavoriteButton from "../components/FavoriteButton"; 
 import { supabase } from "../lib/supabase";
 import { toast } from "react-toastify";
@@ -65,14 +64,13 @@ function Explore() {
 
   return (
     <div style={{ background: "#f9fafb", minHeight: "100vh" }}>
-      <Navbar />
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px" }}>
         
         {/* ========================================================
-            ❤️ PERSONAL FAVORITES GRID
+            ÃƒÂ¢Ã‚ÂÃ‚Â¤ÃƒÂ¯Ã‚Â¸Ã‚Â PERSONAL FAVORITES GRID
            ======================================================== */}
         <section style={{ marginBottom: "40px" }}>
-          <h2 style={{ fontSize: "22px", fontWeight: "700", marginBottom: "16px" }}>❤️ My Saved Places</h2>
+          <h2 style={{ fontSize: "22px", fontWeight: "700", marginBottom: "16px" }}>ÃƒÂ¢Ã‚ÂÃ‚Â¤ÃƒÂ¯Ã‚Â¸Ã‚Â My Saved Places</h2>
           
           {!userIsLoggedIn ? (
             <div style={{ background: "#fff", padding: "20px", borderRadius: "8px", border: "1px solid #e5e7eb", textAlign: "center" }}>

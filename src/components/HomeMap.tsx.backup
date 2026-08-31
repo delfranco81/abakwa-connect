@@ -1,0 +1,503 @@
+﻿import { useEffect, useMemo, useState } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMap,
+} from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { Link } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
+
+import iconUrl from "leaflet/dist/images/marker-icon.png";
+import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
+import shadowUrl from "leaflet/dist/images/marker-shadow.png";
+
+const DefaultIcon = L.icon({
+  iconUrl,
+  iconRetinaUrl,
+  shadowUrl,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
+
+type Coordinates = [number, number];
+
+type MapItem = {
+  id: string;
+  name: string;
+  category: string | null;
+  address: string | null;
+  city: string | null;
+  latitude: number;
+  longitude: number;
+  type: "business" | "place";
+  image?: string | null;
+};
+
+const BAMENDA: Coordinates = [5.9631, 10.1591];
+
+function MapMover({
+  center,
+}: {
+  center: Coordinates;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.flyTo(center, 14, {
+      duration: 1,
+    });
+  }, [center, map]);
+
+  return null;
+}
+
+function distanceKm(
+  from: Coordinates,
+  to: Coordinates
+): number {
+  const R = 6371;
+
+  const lat1 =
+    (from[0] * Math.PI) / 180;
+  const lat2 =
+    (to[0] * Math.PI) / 180;
+
+  const dLat =
+    ((to[0] - from[0]) * Math.PI) / 180;
+
+  const dLon =
+    ((to[1] - from[1]) * Math.PI) / 180;
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) *
+      Math.cos(lat2) *
+      Math.sin(dLon / 2) ** 2;
+
+  return (
+    R *
+    2 *
+    Math.atan2(
+      Math.sqrt(a),
+      Math.sqrt(1 - a)
+    )
+  );
+}
+
+function HomeMap() {
+  const [items, setItems] =
+    useState<MapItem[]>([]);
+
+  const [userLocation, setUserLocation] =
+    useState<Coordinates | null>(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [locationLoading, setLocationLoading] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  useEffect(() => {
+    async function loadMapItems() {
+      setLoading(true);
+      setError("");
+
+      try {
+        const [
+          businessResponse,
+          placeResponse,
+        ] = await Promise.all([
+          supabase
+            .from("business")
+            .select(`
+              id,
+              name,
+              category,
+              address,
+              city,
+              latitude,
+              longitude,
+              logo,
+              cover_image
+            `)
+            .not("latitude", "is", null)
+            .not("longitude", "is", null),
+
+          supabase
+            .from("places")
+            .select(`
+              id,
+              name,
+              category,
+              address,
+              city,
+              latitude,
+              longitude,
+              image
+            `)
+            .not("latitude", "is", null)
+            .not("longitude", "is", null),
+        ]);
+
+        if (businessResponse.error) {
+          throw businessResponse.error;
+        }
+
+        if (placeResponse.error) {
+          throw placeResponse.error;
+        }
+
+        const businesses: MapItem[] =
+          (businessResponse.data || [])
+            .filter(
+              (item) =>
+                item.latitude != null &&
+                item.longitude != null
+            )
+            .map((item) => ({
+              id: item.id,
+              name:
+                item.name ||
+                "Unnamed business",
+              category:
+                item.category || null,
+              address:
+                item.address || null,
+              city:
+                item.city || null,
+              latitude:
+                Number(item.latitude),
+              longitude:
+                Number(item.longitude),
+              type: "business",
+              image:
+                item.logo ||
+                item.cover_image ||
+                null,
+            }));
+
+        const places: MapItem[] =
+          (placeResponse.data || [])
+            .filter(
+              (item) =>
+                item.latitude != null &&
+                item.longitude != null
+            )
+            .map((item) => ({
+              id: item.id,
+              name:
+                item.name ||
+                "Unnamed place",
+              category:
+                item.category || null,
+              address:
+                item.address || null,
+              city:
+                item.city || null,
+              latitude:
+                Number(item.latitude),
+              longitude:
+                Number(item.longitude),
+              type: "place",
+              image:
+                item.image || null,
+            }));
+
+        setItems([
+          ...businesses,
+          ...places,
+        ]);
+      } catch (loadError) {
+        console.error(
+          "Home map loading error:",
+          loadError
+        );
+
+        setError(
+          "We couldn't load map locations right now."
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadMapItems();
+  }, []);
+
+  const mapCenter =
+    userLocation || BAMENDA;
+
+  const sortedItems = useMemo(() => {
+    if (!userLocation) {
+      return items;
+    }
+
+    return [...items].sort(
+      (a, b) =>
+        distanceKm(
+          userLocation,
+          [
+            a.latitude,
+            a.longitude,
+          ]
+        ) -
+        distanceKm(
+          userLocation,
+          [
+            b.latitude,
+            b.longitude,
+          ]
+        )
+    );
+  }, [items, userLocation]);
+
+  function findMe() {
+    if (!navigator.geolocation) {
+      setError(
+        "Your browser does not support GPS location."
+      );
+      return;
+    }
+
+    setLocationLoading(true);
+    setError("");
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation([
+          position.coords.latitude,
+          position.coords.longitude,
+        ]);
+
+        setLocationLoading(false);
+      },
+      (locationError) => {
+        console.error(
+          "Location error:",
+          locationError
+        );
+
+        setLocationLoading(false);
+
+        setError(
+          "We couldn't determine your location. Please allow location access."
+        );
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      }
+    );
+  }
+
+  return (
+    <section className="home-map-section">
+      <div className="home-map-heading">
+        <div>
+          <div className="section-eyebrow">
+            MAP
+          </div>
+
+          <h2>
+            Businesses & Places{" "}
+            <span>Near You</span>
+          </h2>
+
+          <p>
+            See exactly where businesses,
+            offices, schools, services and
+            other places are located.
+          </p>
+        </div>
+
+        <div className="home-map-actions">
+          <button
+            type="button"
+            onClick={findMe}
+            disabled={locationLoading}
+            className="home-map-location-button"
+          >
+            {locationLoading
+              ? "Finding you..."
+              : "📍 Use My Location"}
+          </button>
+
+          <Link
+            to="/map"
+            className="home-map-full-button"
+          >
+            Open Full Map →
+          </Link>
+        </div>
+      </div>
+
+      {error && (
+        <div className="home-map-error">
+          {error}
+        </div>
+      )}
+
+      <div className="home-map-container">
+        {loading ? (
+          <div className="home-map-loading">
+            Loading businesses and places...
+          </div>
+        ) : (
+          <MapContainer
+            center={mapCenter}
+            zoom={14}
+            scrollWheelZoom
+            style={{
+              width: "100%",
+              height: "100%",
+            }}
+          >
+            <TileLayer
+              attribution="&copy; OpenStreetMap contributors"
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+
+            <MapMover center={mapCenter} />
+
+            {userLocation && (
+              <Marker
+                position={userLocation}
+              >
+                <Popup>
+                  <strong>
+                    📍 Your Location
+                  </strong>
+                  <br />
+                  You are here.
+                </Popup>
+              </Marker>
+            )}
+
+            {sortedItems.map((item) => {
+              const distance =
+                userLocation
+                  ? distanceKm(
+                      userLocation,
+                      [
+                        item.latitude,
+                        item.longitude,
+                      ]
+                    )
+                  : null;
+
+              return (
+                <Marker
+                  key={`${item.type}-${item.id}`}
+                  position={[
+                    item.latitude,
+                    item.longitude,
+                  ]}
+                >
+                  <Popup>
+                    <div
+                      style={{
+                        minWidth: 190,
+                      }}
+                    >
+                      <strong>
+                        {item.name}
+                      </strong>
+
+                      <br />
+
+                      <span>
+                        {item.type ===
+                        "business"
+                          ? "Business"
+                          : "Place"}
+                      </span>
+
+                      {item.category && (
+                        <>
+                          <br />
+                          {item.category}
+                        </>
+                      )}
+
+                      {item.address && (
+                        <>
+                          <br />
+                          📍 {item.address}
+                        </>
+                      )}
+
+                      {distance !== null && (
+                        <>
+                          <br />
+                          📏{" "}
+                          {distance <
+                          1
+                            ? `${Math.round(
+                                distance *
+                                  1000
+                              )} m away`
+                            : `${distance.toFixed(
+                                1
+                              )} km away`}
+                        </>
+                      )}
+
+                      <br />
+                      <br />
+
+                      <Link
+                        to={
+                          item.type ===
+                          "business"
+                            ? `/business/${item.id}`
+                            : `/place/${item.id}`
+                        }
+                      >
+                        View Details →
+                      </Link>
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            })}
+          </MapContainer>
+        )}
+
+        {!loading &&
+          items.length === 0 && (
+            <div className="home-map-empty">
+              No businesses or places with map
+              coordinates are available yet.
+            </div>
+          )}
+      </div>
+
+      <div className="home-map-footer">
+        <span>
+          📍 {items.length} mapped businesses
+          and places
+        </span>
+
+        {userLocation && (
+          <span>
+            ✓ Distances calculated from your
+            current location
+          </span>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export default HomeMap;

@@ -1,9 +1,5 @@
-function Dashboard() {
-  return (
-    <div style={{ padding: "40px" }}>
-      <h1>Customer Dashboard</h1>
-    </div>
-  );
-}
+import DashboardPage from "@/modules/carwash/dashboard/pages/DashboardPage";
 
-export default Dashboard;
+export default function Dashboard() {
+  return <DashboardPage />;
+}

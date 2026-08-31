@@ -84,7 +84,7 @@ function AdminPlaces() {
 
               <td>{place.category}</td>
 
-              <td>{place.featured ? "⭐" : ""}</td>
+              <td>{place.featured ? "â­" : ""}</td>
 
               <td>
                 <Link to={`/admin/places/edit/${place.id}`}>

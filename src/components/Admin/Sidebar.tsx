@@ -10,13 +10,42 @@ function Sidebar() {
         padding: 20,
       }}
     >
-      <h2>Abakwa Connect</h2>
+      <div>
+        <h2
+          style={{
+            margin: 0,
+          }}
+        >
+          Everyday Connect
+        </h2>
+
+        <p
+          style={{
+            marginTop: 6,
+            fontSize: 12,
+            color: "#94a3b8",
+          }}
+        >
+          Making everyday worth living.
+        </p>
+      </div>
 
       <nav style={{ marginTop: 30 }}>
-        <Link to="/admin" style={linkStyle}>🏠 Dashboard</Link>
-        <Link to="/admin/places" style={linkStyle}>📍 Places</Link>
-        <Link to="/admin/businesses" style={linkStyle}>🏢 Businesses</Link>
-        <Link to="/admin/media" style={linkStyle}>📸 Media</Link>
+        <Link to="/admin" style={linkStyle}>
+          📊 Dashboard
+        </Link>
+
+        <Link to="/admin/places" style={linkStyle}>
+          📍 Places
+        </Link>
+
+        <Link to="/admin/businesses" style={linkStyle}>
+          🏢 Businesses
+        </Link>
+
+        <Link to="/admin/media" style={linkStyle}>
+          🖼️ Media
+        </Link>
       </nav>
     </aside>
   );

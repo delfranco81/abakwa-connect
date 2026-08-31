@@ -1,159 +1,887 @@
-import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+﻿import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
+
+import {
+  Link,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+
+import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/core/auth";
 
 function Navbar() {
   const location = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
-  // Automatically close the mobile sidebar drawer when a user switches routes
+  const {
+    language,
+    setLanguage,
+    t,
+  } = useLanguage();
+
+  const {
+    user,
+    logout,
+  } = useAuth();
+
+  const [
+    mobileMenuOpen,
+    setMobileMenuOpen,
+  ] = useState(false);
+
+  const [
+    profileMenuOpen,
+    setProfileMenuOpen,
+  ] = useState(false);
+
+  const profileRef =
+    useRef<HTMLDivElement>(null);
+
+  /*
+   * CLOSE MENUS WHEN PAGE CHANGES
+   */
   useEffect(() => {
     setMobileMenuOpen(false);
+    setProfileMenuOpen(false);
   }, [location.pathname]);
 
-  const isActive = (path: string) => location.pathname === path;
+  /*
+   * SET PAGE LANGUAGE
+   */
+  useEffect(() => {
+    document.documentElement.lang =
+      language;
+  }, [language]);
 
-  // Style helper to handle active states dynamically
-  const getLinkStyle = (path: string) => ({
-    color: "white",
-    textDecoration: isActive(path) ? "underline" : "none",
-    fontWeight: isActive(path) ? 700 : 500,
-    fontSize: "14px",
-  });
+  /*
+   * CLOSE PROFILE MENU WHEN
+   * CLICKING OUTSIDE
+   */
+  useEffect(() => {
+    function handleOutsideClick(
+      event: MouseEvent
+    ) {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(
+          event.target as Node
+        )
+      ) {
+        setProfileMenuOpen(false);
+      }
+    }
+
+    if (profileMenuOpen) {
+      document.addEventListener(
+        "mousedown",
+        handleOutsideClick
+      );
+    }
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleOutsideClick
+      );
+    };
+  }, [profileMenuOpen]);
+
+  /*
+   * NAVIGATION LINKS
+   */
+  const links = [
+    {
+      path: "/",
+      label: t.home,
+    },
+    {
+      path: "/cleaning-services",
+      label: t.cleaning,
+    },
+    {
+      path: "/explore",
+      label: t.explore,
+    },
+    {
+      path: "/taxi",
+      label: t.taxi,
+    },
+    {
+      path: "/bike",
+      label: t.bike,
+    },
+    {
+      path: "/food",
+      label: t.food,
+    },
+    {
+      path: "/hotels",
+      label: t.hotels,
+    },
+    {
+      path: "/news",
+      label: t.news,
+    },
+    {
+      path: "/contact",
+      label: t.contact,
+    },
+  ];
+
+  /*
+   * ACTIVE LINK
+   */
+  function isActive(path: string) {
+    if (path === "/") {
+      return location.pathname === "/";
+    }
+
+    return location.pathname === path;
+  }
+
+  /*
+   * LANGUAGE
+   */
+  function handleLanguageChange(
+    event: ChangeEvent<HTMLSelectElement>
+  ) {
+    setLanguage(
+      event.target.value === "fr"
+        ? "fr"
+        : "en"
+    );
+  }
+
+  /*
+   * LOGOUT
+   */
+  async function handleLogout() {
+    try {
+      await logout();
+
+      setProfileMenuOpen(false);
+      setMobileMenuOpen(false);
+
+      navigate("/login", {
+        replace: true,
+      });
+    } catch (error) {
+      console.error(
+        "Logout error:",
+        error
+      );
+    }
+  }
+
+  /*
+   * USER INFORMATION
+   *
+   * USERNAME IS THE PUBLIC DISPLAY NAME.
+   * Full name is only used as a fallback.
+   */
+  const metadata =
+    user?.user_metadata || {};
+
+  const fullName =
+    typeof metadata.full_name ===
+    "string"
+      ? metadata.full_name.trim()
+      : "";
+
+  const username =
+    typeof metadata.username ===
+    "string"
+      ? metadata.username.trim()
+      : "";
+
+  const email =
+    user?.email || "";
+
+  const displayName =
+    username ||
+    fullName ||
+    email.split("@")[0] ||
+    "User";
+
+  const avatarUrl =
+    typeof metadata.avatar_url ===
+    "string"
+      ? metadata.avatar_url.trim()
+      : "";
+
+  /*
+   * PROFILE AVATAR
+   *
+   * Blank white circle when there
+   * is no profile picture.
+   */
+  function ProfileAvatar({
+    size = 48,
+  }: {
+    size?: number;
+  }) {
+    return (
+      <div
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          overflow: "hidden",
+          background: "#ffffff",
+          border:
+            "2px solid rgba(255,255,255,0.75)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt={displayName}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <header
       style={{
         position: "sticky",
         top: 0,
-        zIndex: 1000, // Floats safely over leaflet maps
-        background: "#003366",
+        zIndex: 1000,
+        width: "100%",
+        background: "#003b36",
         color: "white",
-        fontFamily: "sans-serif",
+        fontFamily:
+          "Arial, Helvetica, sans-serif",
+        boxShadow:
+          "0 2px 12px rgba(0,0,0,0.12)",
       }}
     >
       <div
+        className="ecos-navbar-inner"
         style={{
-          padding: "18px 24px",
-          maxWidth: "1200px",
+          width: "100%",
+          maxWidth: "1400px",
+          minHeight: "82px",
           margin: "0 auto",
+          padding: "8px 20px",
+          boxSizing: "border-box",
           display: "flex",
-          justifyContent: "space-between",
           alignItems: "center",
-          height: "64px",
-          boxSizing: "border-box"
+          gap: "20px",
         }}
       >
-        {/* BRAND IDENTITY */}
-        <Link to="/" style={{ color: "white", textDecoration: "none" }}>
-          <h2 style={{ margin: 0, fontSize: "22px", fontWeight: "700" }}>Abakwa Connect</h2>
-        </Link>
+        {/* LEFT — EVERYDAY CONNECT LOGO */}
 
-        {/* DESKTOP LINK SYSTEM (Collapses automatically on mobile) */}
-        <nav 
-          className="desktop-nav" 
+        <Link
+          to="/"
+          aria-label={`${t.appName} home`}
           style={{
             display: "flex",
-            gap: "20px",
-            alignItems: "center"
+            alignItems: "center",
+            flexShrink: 0,
+            textDecoration: "none",
           }}
         >
-          <Link style={getLinkStyle("/")} to="/">Home</Link>
-          <Link style={getLinkStyle("/cleaning services")} to="/cleaning services">Carwash</Link>
-          <Link style={getLinkStyle("/explore")} to="/explore">Explore</Link>
-          <Link style={getLinkStyle("/taxi")} to="/taxi">Taxi</Link>
-          <Link style={getLinkStyle("/bike")} to="/bike">Bike</Link>
-          <Link style={getLinkStyle("/food")} to="/food">Food</Link>
-          <Link style={getLinkStyle("/hotels")} to="/hotels">Hotels</Link>
-          <Link style={getLinkStyle("/contact")} to="/contact">Contact</Link>
-          <Link style={getLinkStyle("/map")} to="/map">Map</Link>
-        </nav>
+          <img
+            src="/branding/everyday-connect-logo.png"
+            alt={t.appName}
+            style={{
+              height: "58px",
+              width: "auto",
+              maxWidth: "210px",
+              objectFit: "contain",
+              display: "block",
+            }}
+          />
+        </Link>
 
-        {/* MOBILE BURGER TOGGLE UTILITY BUTTON */}
-        <button
-          className="mobile-burger-btn"
-          type="button"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label="Toggle Navigation Menu"
+        {/* CENTER — DESKTOP NAVIGATION */}
+
+        <nav
+          className="ecos-desktop-nav"
           style={{
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            padding: "8px",
-            display: "none", // Toggled active under max-width 768px in global stylesheet
-            flexDirection: "column",
-            gap: "5px",
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "16px",
+            minWidth: 0,
           }}
         >
-          <div style={{ width: "22px", height: "2px", background: "white", transition: "0.2s", transform: mobileMenuOpen ? "rotate(45deg) translate(5px, 5px)" : "none" }} />
-          <div style={{ width: "22px", height: "2px", background: "white", transition: "0.2s", opacity: mobileMenuOpen ? 0 : 1 }} />
-          <div style={{ width: "22px", height: "2px", background: "white", transition: "0.2s", transform: mobileMenuOpen ? "rotate(-45deg) translate(5px, -5px)" : "none" }} />
+          {links.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              style={{
+                color: "white",
+                textDecoration:
+                  isActive(link.path)
+                    ? "underline"
+                    : "none",
+                textUnderlineOffset: "5px",
+                fontWeight:
+                  isActive(link.path)
+                    ? 700
+                    : 500,
+                fontSize: "14px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {link.label}
+            </Link>
+          ))}</nav>
+
+
+
+        {/* STANDALONE LANGUAGE SELECTOR */}
+
+        <div
+          className="ecos-language-selector"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            flexShrink: 0,
+          }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              fontSize: 17,
+              lineHeight: 1,
+            }}
+          >
+            🌐
+          </span>
+
+          <select
+            value={language}
+            onChange={handleLanguageChange}
+            aria-label={t.language}
+            style={{
+              padding: "7px 9px",
+              borderRadius: 7,
+              border:
+                "1px solid rgba(255,255,255,0.35)",
+              background: "#ffffff",
+              color: "#172033",
+              cursor: "pointer",
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            <option value="en">
+              {t.english}
+            </option>
+
+            <option value="fr">
+              {t.french}
+            </option>
+          </select>
+        </div>
+
+        {/* RIGHT — STAND-ALONE USER PROFILE */}
+
+        {user && (
+          <div
+            ref={profileRef}
+            className="ecos-profile"
+            style={{
+              position: "relative",
+              flexShrink: 0,
+              marginLeft: "auto",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() =>
+                setProfileMenuOpen(
+                  (open) => !open
+                )
+              }
+              aria-expanded={
+                profileMenuOpen
+              }
+              aria-label="Open profile menu"
+              style={{
+                border: "none",
+                background:
+                  "transparent",
+                color: "white",
+                cursor: "pointer",
+                padding: "2px 4px",
+                display: "flex",
+                flexDirection:
+                  "column",
+                alignItems:
+                  "center",
+                justifyContent:
+                  "center",
+                gap: 4,
+                minWidth: 70,
+              }}
+            >
+              <ProfileAvatar size={46} />
+
+              <span
+                style={{
+                  maxWidth: 120,
+                  overflow: "hidden",
+                  textOverflow:
+                    "ellipsis",
+                  whiteSpace:
+                    "nowrap",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "white",
+                }}
+              >
+                {displayName}
+              </span>
+            </button>
+
+            {/* PROFILE DROPDOWN */}
+
+            {profileMenuOpen && (
+              <div
+                style={{
+                  position: "absolute",
+                  top:
+                    "calc(100% + 10px)",
+                  right: 0,
+                  width: 280,
+                  background: "white",
+                  borderRadius: 14,
+                  boxShadow:
+                    "0 15px 40px rgba(0,0,0,0.22)",
+                  border:
+                    "1px solid #e5e7eb",
+                  padding: 10,
+                  color: "#172033",
+                }}
+              >
+                {/* PROFILE SUMMARY */}
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems:
+                      "center",
+                    gap: 12,
+                    padding: 12,
+                    borderBottom:
+                      "1px solid #edf0f2",
+                    marginBottom: 6,
+                  }}
+                >
+                  <div
+                    style={{
+                      background:
+                        "#f3f5f5",
+                      borderRadius:
+                        "50%",
+                      padding: 2,
+                    }}
+                  >
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={displayName}
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius:
+                            "50%",
+                          objectFit:
+                            "cover",
+                          display:
+                            "block",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius:
+                            "50%",
+                          background:
+                            "white",
+                          border:
+                            "1px solid #d9dfe1",
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  <div
+                    style={{
+                      minWidth: 0,
+                    }}
+                  >
+                    <strong
+                      style={{
+                        display:
+                          "block",
+                        color:
+                          "#172033",
+                        fontSize: 15,
+                        overflow:
+                          "hidden",
+                        textOverflow:
+                          "ellipsis",
+                        whiteSpace:
+                          "nowrap",
+                      }}
+                    >
+                      {displayName}
+                    </strong>
+
+                    <small
+                      style={{
+                        display:
+                          "block",
+                        marginTop: 3,
+                        color:
+                          "#667085",
+                        overflow:
+                          "hidden",
+                        textOverflow:
+                          "ellipsis",
+                        whiteSpace:
+                          "nowrap",
+                      }}
+                    >
+                      {email}
+                    </small>
+                  </div>
+                </div>
+
+                {/* MY PROFILE */}
+
+                <Link
+                  to="/profile"
+                  onClick={() =>
+                    setProfileMenuOpen(
+                      false
+                    )
+                  }
+                  style={
+                    accountMenuLinkStyle
+                  }
+                >
+                  <span
+                    style={{
+                      fontSize: 19,
+                    }}
+                  >
+                    👤
+                  </span>
+
+                  <span>
+                    <strong>
+                      My Profile
+                    </strong>
+
+                    <small>
+                      View and edit your
+                      personal information
+                    </small>
+                  </span>
+                </Link>
+
+                {/* MY BUSINESSES */}
+
+                <Link
+                  to="/business-dashboard"
+                  onClick={() =>
+                    setProfileMenuOpen(
+                      false
+                    )
+                  }
+                  style={
+                    accountMenuLinkStyle
+                  }
+                >
+                  <span
+                    style={{
+                      fontSize: 19,
+                    }}
+                  >
+                    🏢
+                  </span>
+
+                  <span>
+                    <strong>
+                      My Businesses
+                    </strong>
+
+                    <small>
+                      Manage your registered
+                      businesses
+                    </small>
+                  </span>
+                </Link>
+
+                {/* ACCOUNT SETTINGS */}
+
+                <Link
+                  to="/business-dashboard/settings"
+                  onClick={() =>
+                    setProfileMenuOpen(
+                      false
+                    )
+                  }
+                  style={
+                    accountMenuLinkStyle
+                  }
+                >
+                  <span
+                    style={{
+                      fontSize: 19,
+                    }}
+                  >
+                    ⚙️
+                  </span>
+
+                  <span>
+                    <strong>
+                      Account Settings
+                    </strong>
+
+                    <small>
+                      Manage your account
+                      settings
+                    </small>
+                  </span>
+                </Link>
+
+                {/* SIGN OUT */}
+
+                <button
+                  type="button"
+                  onClick={
+                    handleLogout
+                  }
+                  style={{
+                    ...accountMenuLinkStyle,
+                    width: "100%",
+                    border: "none",
+                    background:
+                      "transparent",
+                    cursor:
+                      "pointer",
+                    textAlign:
+                      "left",
+                    fontFamily:
+                      "inherit",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 19,
+                    }}
+                  >
+                    🚪
+                  </span>
+
+                  <span>
+                    <strong>
+                      Sign Out
+                    </strong>
+
+                    <small>
+                      Sign out of Everyday
+                      Connect
+                    </small>
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        {/* MOBILE MENU BUTTON */}
+
+        <button
+          type="button"
+          className="ecos-mobile-menu-button"
+          onClick={() =>
+            setMobileMenuOpen(
+              (open) => !open
+            )
+          }
+          aria-expanded={
+            mobileMenuOpen
+          }
+          aria-label={
+            mobileMenuOpen
+              ? "Close menu"
+              : "Open menu"
+          }
+          style={{
+            display: "none",
+            border: "none",
+            background:
+              "transparent",
+            color: "white",
+            fontSize: 28,
+            cursor: "pointer",
+            padding: 4,
+            flexShrink: 0,
+          }}
+        >
+          {mobileMenuOpen
+            ? "×"
+            : "☰"}
         </button>
       </div>
 
-      {/* MOBILE DRAWER FLYOUT CONTAINER */}
-      <div
-        style={{
-          position: "fixed",
-          top: "64px",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: "rgba(0, 0, 0, 0.4)",
-          backdropFilter: "blur(4px)",
-          opacity: mobileMenuOpen ? 1 : 0,
-          visibility: mobileMenuOpen ? "visible" : "hidden",
-          transition: "opacity 0.25s ease, visibility 0.25s",
-          zIndex: 999,
-        }}
-        onClick={() => setMobileMenuOpen(false)}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            right: 0,
-            width: "260px",
-            height: "100%",
-            background: "#002244", // Slightly darker shade of blue for distinct slide layer background depth
-            boxShadow: "-4px 0 24px rgba(0,0,0,0.2)",
-            padding: "24px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "16px",
-            boxSizing: "border-box",
-            transform: mobileMenuOpen ? "translateX(0)" : "translateX(100%)",
-            transition: "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <span style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", color: "#6699cc", letterSpacing: "1px", marginBottom: "8px" }}>
-            Categories & Tools
-          </span>
+      {/* MOBILE NAVIGATION */}
 
-          <Link to="/" style={mobileLinkStyle}>🏠 Home</Link>
-          <Link to="/cleaning services" style={mobileLinkStyle}>🧼 Carwash Hub</Link>
-          <Link to="/explore" style={mobileLinkStyle}>🔍 Explore Places</Link>
-          <Link to="/taxi" style={mobileLinkStyle}>🚖 Taxi Booking</Link>
-          <Link to="/bike" style={mobileLinkStyle}>🏍️ Moto Bike Hire</Link>
-          <Link to="/food" style={mobileLinkStyle}>🍲 Food Delivery</Link>
-          <Link to="/hotels" style={mobileLinkStyle}>🏨 Hotels & Lodging</Link>
-          <Link to="/contact" style={mobileLinkStyle}>📞 Contact Support</Link>
-          <Link to="/map" style={mobileLinkStyle}>🗺️ Interactive Map</Link>
-        </div>
-      </div>
+      {mobileMenuOpen && (
+        <nav
+          className="ecos-mobile-nav"
+          style={{
+            background: "#003b36",
+            borderTop:
+              "1px solid rgba(255,255,255,0.12)",
+            padding:
+              "14px 20px 22px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection:
+                "column",
+              gap: 14,
+            }}
+          >
+            {links.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                onClick={() =>
+                  setMobileMenuOpen(
+                    false
+                  )
+                }
+                style={{
+                  color: "white",
+                  textDecoration:
+                    isActive(
+                      link.path
+                    )
+                      ? "underline"
+                      : "none",
+                  fontWeight:
+                    isActive(
+                      link.path
+                    )
+                      ? 700
+                      : 500,
+                  fontSize: 15,
+                }}
+              >
+                {link.label}
+              </Link>
+            ))}</div>
+        </nav>
+      )}
+
+      <style>
+        {`
+          @media (max-width: 1150px) {
+            .ecos-desktop-nav {
+              display: none !important;
+            }
+
+            .ecos-navbar-inner {
+              justify-content: space-between !important;
+            }
+
+            .ecos-mobile-menu-button {
+              display: block !important;
+            }
+
+            .ecos-profile {
+              margin-left: auto !important;
+            }
+
+            .ecos-language-selector {
+              display: flex !important;
+            }
+          }
+
+          @media (max-width: 600px) {
+            .ecos-language-selector select {
+              padding: 6px 7px !important;
+              font-size: 12px !important;
+            }
+
+            .ecos-language-selector span {
+              font-size: 15px !important;
+            }
+            .ecos-navbar-inner {
+              padding: 7px 14px !important;
+              min-height: 76px !important;
+              gap: 8px !important;
+            }
+
+            .ecos-navbar-inner > a img {
+              height: 52px !important;
+              max-width: 150px !important;
+            }
+
+            .ecos-profile button {
+              min-width: 62px !important;
+            }
+
+            .ecos-profile button > span {
+              max-width: 90px !important;
+              font-size: 11px !important;
+            }
+
+            .ecos-mobile-menu-button {
+              font-size: 25px !important;
+            }
+          }
+        `}
+      </style>
     </header>
   );
 }
 
-// Sidebar Drawer specific styles
-const mobileLinkStyle = {
-  color: "white",
+const accountMenuLinkStyle = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 12,
+  width: "100%",
+  padding: "11px 10px",
+  borderRadius: 9,
+  color: "#172033",
   textDecoration: "none",
-  fontSize: "16px",
-  fontWeight: 500,
-  padding: "10px 0",
-  borderBottom: "1px solid rgba(255,255,255,0.08)",
-  display: "block",
+  boxSizing:
+    "border-box" as const,
 };
 
 export default Navbar;
+
+
+
