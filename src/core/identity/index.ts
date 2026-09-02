@@ -6,3 +6,6 @@ export * from "./SessionService";
 export * from "./types";
 export * from "./AuthorizationService";
 
+
+export * from "./ecosIdentity.types";
+export * from "./ecosAuthorization";
