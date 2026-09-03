@@ -24,40 +24,38 @@ interface CreatePaymentTransactionResponse {
   };
 }
 
+interface VerifyPaymentTransactionResponse {
+  success: boolean;
+  status?: string;
+  message?: string;
+  transaction?: {
+    id: string;
+    businessId: string;
+    subscriptionId: string | null;
+    amount: number;
+    currency: string;
+    paymentMethod: PaymentMethod;
+    providerReference: string | null;
+    status: string;
+    verifiedAt?: string | null;
+  };
+}
+
 export class PaymentService {
-  /**
-   * Creates the authoritative payment transaction
-   * through the server-side Supabase Edge Function.
-   *
-   * The browser does NOT determine:
-   * - the authenticated user
-   * - the verified email
-   * - the subscription amount
-   * - business ownership
-   *
-   * Those values are verified server-side.
-   */
   async initiatePayment(
     request: PaymentRequest
   ): Promise<PaymentResult> {
     try {
-      const {
-        data: sessionData,
-        error: sessionError,
-      } = await supabase.auth.getSession();
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
 
       if (sessionError) {
-        console.error(
-          "Unable to retrieve payment session:",
-          sessionError
-        );
-
         return {
           success: false,
           status: "failed",
           paymentReference: null,
-          message:
-            "Unable to verify your account session.",
+          transactionId: null,
+          message: "Unable to verify your account session.",
         };
       }
 
@@ -66,8 +64,8 @@ export class PaymentService {
           success: false,
           status: "failed",
           paymentReference: null,
-          message:
-            "Please sign in before starting a payment.",
+          transactionId: null,
+          message: "Please sign in before starting a payment.",
         };
       }
 
@@ -85,15 +83,11 @@ export class PaymentService {
         );
 
       if (error) {
-        console.error(
-          "Payment transaction function error:",
-          error
-        );
-
         return {
           success: false,
           status: "failed",
           paymentReference: null,
+          transactionId: null,
           message:
             error.message ||
             "Unable to create payment transaction.",
@@ -105,35 +99,28 @@ export class PaymentService {
           success: false,
           status: "failed",
           paymentReference: null,
+          transactionId: null,
           message:
             data?.message ||
             "Unable to create payment transaction.",
         };
       }
 
-      /*
-       * The transaction has only been created.
-       *
-       * It has NOT been verified by MTN or Orange.
-       */
       return {
         success: true,
         status: "pending",
         paymentReference:
           data.transaction.providerReference,
+        transactionId: data.transaction.id,
         message:
           "Payment transaction created. Waiting for payment provider processing.",
       };
     } catch (error) {
-      console.error(
-        "Unexpected payment service error:",
-        error
-      );
-
       return {
         success: false,
         status: "failed",
         paymentReference: null,
+        transactionId: null,
         message:
           error instanceof Error
             ? error.message
@@ -142,25 +129,150 @@ export class PaymentService {
     }
   }
 
-  /**
-   * Provider verification will be connected here
-   * after the official MTN and Orange API credentials
-   * and documentation are available.
-   */
   async verifyPayment(
-    _paymentReference: string,
-    _paymentMethod: PaymentMethod,
-    _subscriptionId?: string
+    paymentReference: string,
+    transactionId?: string
   ): Promise<PaymentResult> {
-    return {
-      success: false,
-      status: "pending",
-      paymentReference: _paymentReference,
-      message:
-        "Payment provider verification is not configured yet.",
-    };
+    try {
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
+
+      if (sessionError) {
+        return {
+          success: false,
+          status: "failed",
+          paymentReference,
+          transactionId: transactionId ?? null,
+          message: "Unable to verify your account session.",
+        };
+      }
+
+      if (!sessionData.session) {
+        return {
+          success: false,
+          status: "failed",
+          paymentReference,
+          transactionId: transactionId ?? null,
+          message: "Please sign in before verifying a payment.",
+        };
+      }
+
+      if (!transactionId?.trim()) {
+        return {
+          success: false,
+          status: "failed",
+          paymentReference,
+          transactionId: null,
+          message: "A payment transaction ID is required.",
+        };
+      }
+
+      if (!paymentReference.trim()) {
+        return {
+          success: false,
+          status: "failed",
+          paymentReference: null,
+          transactionId,
+          message: "A payment reference is required.",
+        };
+      }
+
+      const { data, error } =
+        await supabase.functions.invoke<VerifyPaymentTransactionResponse>(
+          "verify-payment-transaction",
+          {
+            body: {
+              transactionId: transactionId.trim(),
+              providerReference: paymentReference.trim(),
+            },
+          }
+        );
+
+      if (error) {
+        return {
+          success: false,
+          status: "failed",
+          paymentReference,
+          transactionId,
+          message:
+            error.message ||
+            "Unable to verify payment transaction.",
+        };
+      }
+
+      if (!data) {
+        return {
+          success: false,
+          status: "pending",
+          paymentReference,
+          transactionId,
+          message:
+            "Payment verification is still pending.",
+        };
+      }
+
+      const providerReference =
+        data.transaction?.providerReference ??
+        paymentReference;
+
+      switch (data.status) {
+        case "verified":
+        case "already_verified":
+        case "activated":
+          return {
+            success: true,
+            status: "successful",
+            paymentReference: providerReference,
+            transactionId:
+              data.transaction?.id ?? transactionId,
+            message:
+              data.message ||
+              "Payment verified successfully.",
+          };
+
+        case "failed":
+        case "cancelled":
+        case "refunded":
+        case "disputed":
+          return {
+            success: false,
+            status:
+              data.status === "cancelled"
+                ? "cancelled"
+                : "failed",
+            paymentReference: providerReference,
+            transactionId:
+              data.transaction?.id ?? transactionId,
+            message:
+              data.message ||
+              "Payment verification failed.",
+          };
+
+        default:
+          return {
+            success: false,
+            status: "pending",
+            paymentReference: providerReference,
+            transactionId:
+              data.transaction?.id ?? transactionId,
+            message:
+              data.message ||
+              "Payment verification is still pending.",
+          };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        status: "failed",
+        paymentReference,
+        transactionId: transactionId ?? null,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to verify payment.",
+      };
+    }
   }
 }
 
-export const paymentService =
-  new PaymentService();
+export const paymentService = new PaymentService();

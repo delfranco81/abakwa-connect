@@ -1,4 +1,4 @@
-﻿const en = {
+const en = {
   appName: "Everyday Connect",
   everydayConnect: "EVERYDAY CONNECT",
 
@@ -617,23 +617,138 @@
 
   continue:
     "Continue",
+  /* =========================
+     BUSINESS DASHBOARD
+  ========================= */
+
+  businessDashboardEcosBusiness: "ECOS Business",
+  businessDashboardTitle: "Business Dashboard",
+  businessDashboardDefaultCategory: "Business",
+  businessDashboardDescription: "Manage your business, services, bookings and customers from one place.",
+  businessDashboardEditBusiness: "Edit Business",
+  businessDashboardLocationNotProvided: "Location not provided",
+  businessDashboardContactNotProvided: "Contact information not provided",
+
+  businessDashboardBookings: "Bookings",
+  businessDashboardUpcomingBookings: "Upcoming customer bookings",
+  businessDashboardCustomers: "Customers",
+  businessDashboardCustomersServed: "Customers served",
+  businessDashboardServices: "Services",
+  businessDashboardActiveServices: "Active services",
+  businessDashboardRevenue: "Revenue",
+  businessDashboardTotalRecordedRevenue: "Total recorded revenue",
+
+  businessDashboardManageTitle: "Manage your business",
+
+  businessDashboardManageServices:
+    "Create and manage the services your business offers.",
+  businessDashboardManageServicesAction: "Manage Services",
+
+  businessDashboardManageBookings:
+    "View and manage customer bookings.",
+  businessDashboardBookingsAction: "View Bookings",
+
+  businessDashboardManageCustomers:
+    "Keep track of customers and their activity.",
+  businessDashboardCustomersAction: "View Customers",
+
+  businessDashboardManageProfile:
+    "Update your business information, logo and contact details.",
+  businessDashboardProfile: "Business Profile",
+  businessDashboardEditProfile: "Edit Profile",
+
+  businessDashboardManageEmployees:
+    "Manage employees working for your business.",
+  businessDashboardEmployees: "Employees",
+  businessDashboardEmployeesAction: "Manage Employees",
+
+  businessDashboardManageDepartments:
+    "Organize your business into departments.",
+  businessDashboardDepartments: "Departments",
+  businessDashboardDepartmentsAction: "Manage Departments",
+
+  businessDashboardManageGallery:
+    "Manage photos and media for your business.",
+  businessDashboardGallery: "Gallery",
+  businessDashboardGalleryAction: "Manage Gallery",
+
+  businessDashboardManageReviews:
+    "View and manage customer reviews.",
+  businessDashboardReviews: "Reviews",
+  businessDashboardReviewsAction: "View Reviews",
+
+  businessDashboardSubscription: "Subscription",
+  businessDashboardManageSubscription:
+    "Manage the subscription and payment access for this business.",
+  businessDashboardManageSubscriptionAction:
+    "Manage Subscription",
+
+  businessDashboardLoadingTitle:
+    "Loading your business...",
+  businessDashboardLoadingDescription:
+    "Please wait while we load your business account.",
+
+  businessDashboardLoadErrorTitle:
+    "Unable to load your business",
+  businessDashboardTryAgain: "Try Again",
+
+  businessDashboardNoBusinessTitle:
+    "You don't have a business yet",
+  businessDashboardNoBusinessDescription:
+    "Register your business to start using the ECOS business management dashboard.",
+  businessDashboardRegisterBusiness:
+    "Register My Business",
+
+  businessDashboardMakingLifeWorthLiving:
+    "Making Life Worth Living",
+
+  /* =========================
+     BUSINESS SUBSCRIPTION
+  ========================= */
+
+  businessSubscriptionLoadError: "Unable to load subscription information.",
+  businessSubscriptionBusinessRequired: "A business is required.",
+  businessSubscriptionPlanRequired: "Please select a membership plan.",
+  businessSubscriptionPlanUnavailable: "This membership plan is no longer available.",
+  businessSubscriptionPaymentAccountRequired: "Please select a verified payment account.",
+  businessSubscriptionPhoneRequired: "Please enter your customer phone number.",
+  businessSubscriptionActivated: "Your membership has been activated.",
+  businessSubscriptionPaymentFailed: "Membership payment could not be started.",
+  businessSubscriptionPaymentCreated: "Membership payment created. Complete the payment with your selected provider.",
+  businessSubscriptionUnableToSubscribe: "Unable to complete the membership request.",
+
+  businessSubscriptionLoadingTitle: "Loading subscription information...",
+  businessSubscriptionLoadingDescription: "Please wait while we load the membership options for this business.",
+
+  businessSubscriptionTitle: "Business Subscription",
+  businessSubscriptionCurrentMembership: "Current Membership",
+  businessSubscriptionStatus: "Status",
+  businessSubscriptionExpires: "Expires",
+
+  businessSubscriptionNoPlansTitle: "No membership plans available",
+  businessSubscriptionNoPlansDescription: "This business has not published any membership plans yet.",
+
+  businessSubscriptionChoosePlan: "Choose a membership plan",
+  businessSubscriptionPaymentTitle: "Payment",
+  businessSubscriptionNoPaymentAccounts: "This business has no verified MTN or Orange Money payment accounts available.",
+  businessSubscriptionPaymentMethod: "Payment method",
+  businessSubscriptionPhoneNumber: "Customer phone number",
+  businessSubscriptionPhonePlaceholder: "Enter the phone number used for payment",
+  businessSubscriptionProcessing: "Processing...",
+  businessSubscriptionContinue: "Continue",
+
+  businessSubscriptionApprovalRequired: "Approval required",
+
+  businessSubscriptionOrangeMoney: "Orange Money",
+  businessSubscriptionMtnMobileMoney: "MTN Mobile Money",
+  businessSubscriptionBank: "Bank",
+  businessSubscriptionOther: "Other",
+
+  businessSubscriptionMonthly: "Monthly",
+  businessSubscriptionYearly: "Yearly",
+  businessSubscriptionOneTime: "One-time",
+  businessSubscriptionInviteOnly: "Invite only",
+  businessSubscriptionFree: "Free",
 };
 
 export default en;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,4 +1,4 @@
-import { withSupabase } from "npm:@supabase/server@^1";
+﻿import { withSupabase } from "npm:@supabase/server@^1";
 
 interface VerifyPaymentRequest {
   transactionId?: unknown;
@@ -122,7 +122,7 @@ export default {
       return Response.json(
         {
           success: false,
-          message: "Payment transaction was not found.",
+        message: "Payment transaction was not found.",
         },
         { status: 404 },
       );
@@ -152,9 +152,22 @@ export default {
     }
 
     const providerReference =
-      suppliedProviderReference || transaction.provider_reference || null;
+      suppliedProviderReference ||
+      transaction.provider_reference ||
+      null;
 
     /*
+     * The database transaction is the authoritative source for:
+     *
+     * - payment method
+     * - subscription
+     * - business
+     * - amount
+     * - authenticated user
+     * - transaction status
+     *
+     * The client cannot override those values.
+     *
      * Provider API integration is intentionally not performed yet.
      *
      * MTN Mobile Money and Orange Money provider credentials,

@@ -1,4 +1,4 @@
-export type PaymentMethod =
+﻿export type PaymentMethod =
   | "mtn"
   | "orange";
 
@@ -20,5 +20,6 @@ export interface PaymentResult {
   success: boolean;
   status: PaymentStatus;
   paymentReference: string | null;
+  transactionId?: string | null;
   message: string;
 }

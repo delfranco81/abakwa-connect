@@ -1,4 +1,4 @@
-﻿const fr = {
+const fr = {
   appName: "Everyday Connect",
   everydayConnect: "EVERYDAY CONNECT",
 
@@ -695,22 +695,189 @@
 
   continue:
     "Continuer",
+
+  /* =========================
+     TABLEAU DE BORD ENTREPRISE
+  ========================= */
+
+  businessDashboardEcosBusiness: "Entreprise ECOS",
+  businessDashboardTitle: "Tableau de bord de l'entreprise",
+  businessDashboardDefaultCategory: "Entreprise",
+  businessDashboardDescription:
+    "Gérez votre entreprise, vos services, vos réservations et vos clients depuis un seul endroit.",
+  businessDashboardEditBusiness: "Modifier l'entreprise",
+  businessDashboardLocationNotProvided: "Emplacement non renseigné",
+  businessDashboardContactNotProvided: "Coordonnées non renseignées",
+
+  businessDashboardBookings: "Réservations",
+  businessDashboardUpcomingBookings:
+    "Prochaines réservations des clients",
+  businessDashboardCustomers: "Clients",
+  businessDashboardCustomersServed: "Clients servis",
+  businessDashboardServices: "Services",
+  businessDashboardActiveServices: "Services actifs",
+  businessDashboardRevenue: "Revenus",
+  businessDashboardTotalRecordedRevenue:
+    "Revenus totaux enregistrés",
+
+  businessDashboardManageTitle:
+    "Gérer votre entreprise",
+
+  businessDashboardManageServices:
+    "Créez et gérez les services proposés par votre entreprise.",
+  businessDashboardManageServicesAction:
+    "Gérer les services",
+
+  businessDashboardManageBookings:
+    "Consultez et gérez les réservations des clients.",
+  businessDashboardBookingsAction:
+    "Voir les réservations",
+
+  businessDashboardManageCustomers:
+    "Suivez vos clients et leur activité.",
+  businessDashboardCustomersAction:
+    "Voir les clients",
+
+  businessDashboardManageProfile:
+    "Mettez à jour les informations, le logo et les coordonnées de votre entreprise.",
+  businessDashboardProfile:
+    "Profil de l'entreprise",
+  businessDashboardEditProfile:
+    "Modifier le profil",
+
+  businessDashboardManageEmployees:
+    "Gérez les employés qui travaillent pour votre entreprise.",
+  businessDashboardEmployees: "Employés",
+  businessDashboardEmployeesAction:
+    "Gérer les employés",
+
+  businessDashboardManageDepartments:
+    "Organisez votre entreprise en départements.",
+  businessDashboardDepartments:
+    "Départements",
+  businessDashboardDepartmentsAction:
+    "Gérer les départements",
+
+  businessDashboardManageGallery:
+    "Gérez les photos et les médias de votre entreprise.",
+  businessDashboardGallery: "Galerie",
+  businessDashboardGalleryAction:
+    "Gérer la galerie",
+
+  businessDashboardManageReviews:
+    "Consultez et gérez les avis des clients.",
+  businessDashboardReviews: "Avis",
+  businessDashboardReviewsAction:
+    "Voir les avis",
+
+  businessDashboardSubscription: "Abonnement",
+  businessDashboardManageSubscription:
+    "Gérez l'abonnement et l'accès aux paiements pour cette entreprise.",
+  businessDashboardManageSubscriptionAction:
+    "Gérer l'abonnement",
+
+  businessDashboardLoadingTitle:
+    "Chargement de votre entreprise...",
+  businessDashboardLoadingDescription:
+    "Veuillez patienter pendant le chargement de votre compte professionnel.",
+
+  businessDashboardLoadErrorTitle:
+    "Impossible de charger votre entreprise",
+  businessDashboardTryAgain: "Réessayer",
+
+  businessDashboardNoBusinessTitle:
+    "Vous n'avez pas encore d'entreprise",
+  businessDashboardNoBusinessDescription:
+    "Enregistrez votre entreprise pour commencer à utiliser le tableau de bord de gestion ECOS.",
+  businessDashboardRegisterBusiness:
+    "Enregistrer mon entreprise",
+
+  businessDashboardMakingLifeWorthLiving:
+    "Rendre chaque jour digne d'être vécu",
+
+  /* =========================
+     ABONNEMENT ENTREPRISE
+  ========================= */
+
+  businessSubscriptionLoadError:
+    "Impossible de charger les informations d'abonnement.",
+  businessSubscriptionBusinessRequired:
+    "Une entreprise est requise.",
+  businessSubscriptionPlanRequired:
+    "Veuillez sélectionner un forfait d'adhésion.",
+  businessSubscriptionPlanUnavailable:
+    "Ce forfait d'adhésion n'est plus disponible.",
+  businessSubscriptionPaymentAccountRequired:
+    "Veuillez sélectionner un compte de paiement vérifié.",
+  businessSubscriptionPhoneRequired:
+    "Veuillez saisir votre numéro de téléphone client.",
+  businessSubscriptionActivated:
+    "Votre adhésion a été activée.",
+  businessSubscriptionPaymentFailed:
+    "Le paiement de l'adhésion n'a pas pu être démarré.",
+  businessSubscriptionPaymentCreated:
+    "Paiement de l'adhésion créé. Effectuez le paiement avec le fournisseur sélectionné.",
+  businessSubscriptionUnableToSubscribe:
+    "Impossible de finaliser la demande d'adhésion.",
+
+  businessSubscriptionLoadingTitle:
+    "Chargement des informations d'abonnement...",
+  businessSubscriptionLoadingDescription:
+    "Veuillez patienter pendant le chargement des options d'adhésion de cette entreprise.",
+
+  businessSubscriptionTitle:
+    "Abonnement entreprise",
+  businessSubscriptionCurrentMembership:
+    "Adhésion actuelle",
+  businessSubscriptionStatus:
+    "Statut",
+  businessSubscriptionExpires:
+    "Expire le",
+
+  businessSubscriptionNoPlansTitle:
+    "Aucun forfait d'adhésion disponible",
+  businessSubscriptionNoPlansDescription:
+    "Cette entreprise n'a pas encore publié de forfaits d'adhésion.",
+
+  businessSubscriptionChoosePlan:
+    "Choisir un forfait d'adhésion",
+  businessSubscriptionPaymentTitle:
+    "Paiement",
+  businessSubscriptionNoPaymentAccounts:
+    "Cette entreprise ne dispose d'aucun compte de paiement MTN ou Orange Money vérifié disponible.",
+  businessSubscriptionPaymentMethod:
+    "Mode de paiement",
+  businessSubscriptionPhoneNumber:
+    "Numéro de téléphone du client",
+  businessSubscriptionPhonePlaceholder:
+    "Saisissez le numéro de téléphone utilisé pour le paiement",
+  businessSubscriptionProcessing:
+    "Traitement...",
+  businessSubscriptionContinue:
+    "Continuer",
+
+  businessSubscriptionApprovalRequired:
+    "Approbation requise",
+
+  businessSubscriptionOrangeMoney:
+    "Orange Money",
+  businessSubscriptionMtnMobileMoney:
+    "MTN Mobile Money",
+  businessSubscriptionBank:
+    "Banque",
+  businessSubscriptionOther:
+    "Autre",
+
+  businessSubscriptionMonthly:
+    "Mensuel",
+  businessSubscriptionYearly:
+    "Annuel",
+  businessSubscriptionOneTime:
+    "Paiement unique",
+  businessSubscriptionInviteOnly:
+    "Sur invitation uniquement",
+  businessSubscriptionFree:
+    "Gratuit",
 };
 
 export default fr;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

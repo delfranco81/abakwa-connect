@@ -24,6 +24,30 @@ export interface OwnedBusiness {
   total_reviews: number | null;
 }
 
+const BUSINESS_FIELDS = `
+  id,
+  name,
+  owner_id,
+  category,
+  phone,
+  email,
+  description,
+  area,
+  landmark,
+  logo,
+  cover_image,
+  website,
+  whatsapp,
+  opening_hours,
+  address,
+  latitude,
+  longitude,
+  verified,
+  featured,
+  rating,
+  total_reviews
+`;
+
 export async function getOwnedBusiness(): Promise<OwnedBusiness | null> {
   const {
     data: { user },
@@ -45,29 +69,7 @@ export async function getOwnedBusiness(): Promise<OwnedBusiness | null> {
 
   const { data, error } = await supabase
     .from("business")
-    .select(`
-      id,
-      name,
-      owner_id,
-      category,
-      phone,
-      email,
-      description,
-      area,
-      landmark,
-      logo,
-      cover_image,
-      website,
-      whatsapp,
-      opening_hours,
-      address,
-      latitude,
-      longitude,
-      verified,
-      featured,
-      rating,
-      total_reviews
-    `)
+    .select(BUSINESS_FIELDS)
     .eq("owner_id", user.id)
     .order("created_at", {
       ascending: false,
@@ -84,6 +86,63 @@ export async function getOwnedBusiness(): Promise<OwnedBusiness | null> {
     throw new Error(
       error.message ||
         "Unable to load your business."
+    );
+  }
+
+  return data ?? null;
+}
+
+/**
+ * Load one specific business belonging to the
+ * currently authenticated user.
+ *
+ * The business ID is never trusted by itself:
+ * ownership is enforced by the owner_id filter.
+ */
+export async function getOwnedBusinessById(
+  businessId: string
+): Promise<OwnedBusiness | null> {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError) {
+    console.error(
+      "getOwnedBusinessById auth error:",
+      authError
+    );
+
+    throw new Error(authError.message);
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const normalizedBusinessId =
+    businessId.trim();
+
+  if (!normalizedBusinessId) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("business")
+    .select(BUSINESS_FIELDS)
+    .eq("id", normalizedBusinessId)
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error(
+      "getOwnedBusinessById database error:",
+      error
+    );
+
+    throw new Error(
+      error.message ||
+        "Unable to load the selected business."
     );
   }
 
