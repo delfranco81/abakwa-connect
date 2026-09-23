@@ -1,4 +1,4 @@
-import {
+﻿import {
   useEffect,
   useState,
   type ChangeEvent,
@@ -29,6 +29,38 @@ type Category = {
   name: string;
 };
 
+type ServiceDraft = {
+  id: string;
+  serviceName: string;
+  description: string;
+  price: string;
+  durationMinutes: string;
+  cleaningCategory: string;
+};
+
+const CLEANING_CATEGORIES = [
+  { value: "car-wash", label: "Car Wash" },
+  { value: "vehicle-detailing", label: "Vehicle Detailing" },
+  { value: "home-cleaning", label: "Home Cleaning" },
+  { value: "hotel-cleaning", label: "Hotel Cleaning" },
+  { value: "office-cleaning", label: "Office Cleaning" },
+  { value: "laundry", label: "Laundry" },
+  { value: "carpet-cleaning", label: "Carpet Cleaning" },
+  { value: "general-cleaning", label: "General Cleaning" },
+  { value: "other-cleaning", label: "Other Cleaning" },
+] as const;
+
+function createEmptyService(): ServiceDraft {
+  return {
+    id: crypto.randomUUID(),
+    serviceName: "",
+    description: "",
+    price: "",
+    durationMinutes: "",
+    cleaningCategory: "",
+  };
+}
+
 type DetectedLocation = {
   source:
     | "device" | "browser" | "network" | "manual" | "none";
@@ -51,6 +83,9 @@ function RegisterBusiness() {
 
   const [categories, setCategories] =
     useState<Category[]>([]);
+
+  const [services, setServices] =
+    useState<ServiceDraft[]>([createEmptyService()]);
 
   /*
    * Position used to initially position the map.
@@ -405,7 +440,7 @@ function RegisterBusiness() {
     );
 
     /*
-     * NOW ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â and only now ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â save the coordinates
+     * NOW, and only now, save the coordinates
      * into the registration form.
      */
     setForm((current) => ({
@@ -592,6 +627,63 @@ function RegisterBusiness() {
 
   /*
    * ============================================================
+   * SERVICES & BILLING
+   * ============================================================
+   */
+  function updateService(
+    serviceId: string,
+    field: keyof Omit<ServiceDraft, "id">,
+    value: string
+  ) {
+    setServices((current) =>
+      current.map((service) =>
+        service.id === serviceId
+          ? { ...service, [field]: value }
+          : service
+      )
+    );
+  }
+function removeService(serviceId: string) {
+    setServices((current) => {
+      if (current.length === 1) return current;
+      return current.filter((service) => service.id !== serviceId);
+    });
+  }
+
+  function isCleaningBusiness(category: string) {
+    return category.trim().toLowerCase().includes("cleaning");
+  }
+
+  function validateServices(finalCategory: string) {
+    if (services.length === 0) {
+      return "Add at least one service before registering your business.";
+    }
+
+    for (const service of services) {
+      if (!service.serviceName.trim()) {
+        return "Enter a name for every service.";
+      }
+
+      const price = Number(service.price);
+      if (!Number.isFinite(price) || price < 0) {
+        return `Enter a valid billing rate for ${service.serviceName || "each service"}.`;
+      }
+
+      const duration = Number(service.durationMinutes);
+      if (!Number.isInteger(duration) || duration <= 0) {
+        return `Enter a valid duration in minutes for ${service.serviceName || "each service"}.`;
+      }
+
+      if (isCleaningBusiness(finalCategory) && !service.cleaningCategory) {
+        return `Select a Cleaning Services category for ${service.serviceName || "each service"}.`;
+      }
+    }
+
+    return null;
+  }
+
+  /*
+   * ============================================================
    * IMAGE UPLOAD
    * ============================================================
    */
@@ -731,80 +823,114 @@ function RegisterBusiness() {
           );
       }
 
-      /*
-       * Save business.
-       *
-       * owner remains the human-readable owner name.
-       * owner_id links the business to the authenticated
-       * Supabase user.
-       */
-      const {
-        error,
-      } = await supabase
+      const serviceValidationError = validateServices(finalCategory);
+      if (serviceValidationError) {
+        alert(serviceValidationError);
+        return;
+      }
+
+      const latitude = Number(form.latitude);
+      const longitude = Number(form.longitude);
+
+      const { data: place, error: placeError } = await supabase
+        .from("places")
+        .insert([
+          {
+            name: form.name,
+            category: finalCategory || "Business",
+            description: form.description,
+            image: logoUrl || coverUrl || null,
+            latitude,
+            longitude,
+            lat: latitude,
+            lng: longitude,
+            address: form.area || form.landmark || null,
+            website: form.website || null,
+            phone: form.phone || null,
+            email: form.email || null,
+            verified: false,
+            city: "Bamenda",
+            subdivision: form.area || null,
+            division: "Mezam",
+            region: "North West",
+          },
+        ])
+        .select("id")
+        .single();
+
+      if (placeError || !place) {
+        console.error("PLACE REGISTRATION ERROR:", placeError);
+        alert(
+          placeError?.message ??
+            "The business location could not be registered."
+        );
+        return;
+      }
+
+      const { data: business, error: businessError } = await supabase
         .from("business")
         .insert([
           {
-            name:
-              form.name,
-
-            owner:
-              form.owner,
-
-            owner_id:
-              user.id,
-
-            category:
-              finalCategory,
-
-            phone:
-              form.phone,
-
-            email:
-              form.email,
-
-            description:
-              form.description,
-
-            area:
-              form.area,
-
-            landmark:
-              form.landmark,
-
-            logo:
-              logoUrl,
-
-            cover_image:
-              coverUrl,
-
-            website:
-              form.website,
-
-            whatsapp:
-              form.whatsapp,
-
-            latitude:
-              Number(
-                form.latitude
-              ),
-
-            longitude:
-              Number(
-                form.longitude
-              ),
+            name: form.name,
+            owner: form.owner,
+            owner_id: user.id,
+            place_id: place.id,
+            category: finalCategory,
+            phone: form.phone,
+            email: form.email,
+            description: form.description,
+            area: form.area,
+            landmark: form.landmark,
+            logo: logoUrl,
+            cover_image: coverUrl,
+            website: form.website,
+            whatsapp: form.whatsapp,
+            latitude,
+            longitude,
           },
-        ]);
+        ])
+        .select("id")
+        .single();
 
-      if (error) {
-        console.error(
-          "BUSINESS REGISTRATION ERROR:",
-          error
-        );
-
+      if (businessError || !business) {
+        console.error("BUSINESS REGISTRATION ERROR:", businessError);
+        await supabase.from("places").delete().eq("id", place.id);
         alert(
-          error.message
+          businessError?.message ??
+            "The business could not be registered."
         );
+        return;
+      }
 
+      const serviceRows = services.map((service, index) => ({
+        business_id: place.id,
+        service_name: service.serviceName.trim(),
+        description: service.description.trim() || null,
+        price: Number(service.price),
+        currency: "FCFA",
+        duration_minutes: Number(service.durationMinutes),
+        is_featured: index === 0,
+        display_order: index,
+        active: true,
+        cleaning_category: isCleaningBusiness(finalCategory)
+          ? service.cleaningCategory || null
+          : null,
+      }));
+
+      const { error: servicesError } = await supabase
+        .from("business_services")
+        .insert(serviceRows);
+
+      if (servicesError) {
+        console.error(
+          "BUSINESS SERVICES REGISTRATION ERROR:",
+          servicesError
+        );
+        await supabase.from("business").delete().eq("id", business.id);
+        await supabase.from("places").delete().eq("id", place.id);
+        alert(
+          `The business was not completed because its services could not be saved: ${servicesError.message}`
+        );
         return;
       }
 
@@ -830,6 +956,8 @@ function RegisterBusiness() {
         latitude: "",
         longitude: "",
       });
+
+      setServices([createEmptyService()]);
 
       setLogoFile(
         null
@@ -1132,6 +1260,125 @@ function RegisterBusiness() {
           />
 
           {/* ==================================================
+              SERVICES & BILLING
+          =================================================== */}
+
+          <section className="register-business-services">
+            <h2>Services &amp; Billing</h2>
+            <p>
+              Add the services your business offers. Customers will see the
+              service, billing rate and estimated duration when they choose
+              your business.
+            </p>
+
+            {services.map((service, index) => (
+              <div
+                className="register-business-service-card"
+                key={service.id}
+              >
+                <div className="register-business-service-header">
+                  <h3>Service {index + 1}</h3>
+                  {services.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeService(service.id)}
+                      disabled={loading}
+                    >
+                      Remove Service
+                    </button>
+                  )}
+                </div>
+
+                <label>Service Name</label>
+                <input
+                  type="text"
+                  value={service.serviceName}
+                  onChange={(e) =>
+                    updateService(service.id, "serviceName", e.target.value)
+                  }
+                  placeholder="e.g. Home Deep Cleaning"
+                  required
+                />
+
+                <label>Service Description</label>
+                <textarea
+                  rows={3}
+                  value={service.description}
+                  onChange={(e) =>
+                    updateService(service.id, "description", e.target.value)
+                  }
+                  placeholder="Describe what this service includes"
+                />
+
+                <div className="register-business-service-grid">
+                  <div>
+                    <label>Billing Rate (FCFA)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={service.price}
+                      onChange={(e) =>
+                        updateService(service.id, "price", e.target.value)
+                      }
+                      placeholder="15000"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label>Duration (minutes)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={service.durationMinutes}
+                      onChange={(e) =>
+                        updateService(
+                          service.id,
+                          "durationMinutes",
+                          e.target.value
+                        )
+                      }
+                      placeholder="180"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {isCleaningBusiness(
+                  form.category === "Other"
+                    ? form.customCategory
+                    : form.category
+                ) && (
+                  <>
+                    <label>Cleaning Services Category</label>
+                    <select
+                      value={service.cleaningCategory}
+                      onChange={(e) =>
+                        updateService(
+                          service.id,
+                          "cleaningCategory",
+                          e.target.value
+                        )
+                      }
+                      required
+                    >
+                      <option value="">Select Cleaning Category</option>
+                      {CLEANING_CATEGORIES.map((category) => (
+                        <option key={category.value} value={category.value}>
+                          {category.label}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
+
+
+              </div>
+            ))}</section>
+
+          {/* ==================================================
               LOCATION
           =================================================== */}
 
@@ -1155,7 +1402,7 @@ function RegisterBusiness() {
               loading
             }
           >
-            ??{" "}
+
             {loading
               ? "Detecting Location..."
               : "Use My Current Location"}
@@ -1163,7 +1410,7 @@ function RegisterBusiness() {
 
           {locationStatus && (
             <p className="location-status">
-              ??{" "}
+  
               {locationStatus}
             </p>
           )}
@@ -1185,7 +1432,7 @@ function RegisterBusiness() {
             <div className="register-business-location-status">
 
               <strong>
-                ?? Automatic location source:
+                Automatic location source:
               </strong>
 
               <span>
@@ -1199,14 +1446,14 @@ function RegisterBusiness() {
 
           {locationDetecting && (
             <div className="register-business-location-status">
-              ?? Detecting your device/browser
+              Detecting your device/browser
               location...
             </div>
           )}
 
           {locationWarning && (
             <div className="location-warning">
-              ??{" "}
+  
               {locationWarning}
             </div>
           )}
@@ -1285,7 +1532,7 @@ function RegisterBusiness() {
             form.latitude &&
             form.longitude && (
               <p className="location-confirmed">
-                ? Exact business map location
+                Exact business map location
                 selected
                 <br />
                 Latitude:
@@ -1300,7 +1547,7 @@ function RegisterBusiness() {
 
           {!mapLocationConfirmed && (
             <p className="location-warning">
-              ?? Please click the exact business
+              Please click the exact business
               location on the map or drag the
               marker before registering.
             </p>
@@ -1308,6 +1555,7 @@ function RegisterBusiness() {
 
           <button
             type="submit"
+            className="register-business-submit"
             disabled={
               loading ||
               !mapLocationConfirmed ||
@@ -1320,6 +1568,7 @@ function RegisterBusiness() {
               : "Register Business"}
           </button>
 
+
         </form>
 
       </section>
@@ -1328,6 +1577,20 @@ function RegisterBusiness() {
 }
 
 export default RegisterBusiness;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

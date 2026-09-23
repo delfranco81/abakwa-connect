@@ -1,3 +1,12 @@
+import { Route } from "react-router-dom";
+
+import News from "../pages/News";
+
 export function newsRoutes() {
-  return null;
+  return (
+    <Route
+      path="/news"
+      element={<News />}
+    />
+  );
 }

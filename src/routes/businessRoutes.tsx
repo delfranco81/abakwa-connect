@@ -1,10 +1,11 @@
-import { Route } from "react-router-dom";
+﻿import { Route } from "react-router-dom";
 
 import RegisterBusiness from "../pages/RegisterBusiness";
 import RegistrationGateway from "../pages/RegistrationGateway";
 import Profile from "../pages/Profile";
 import Dashboard from "../pages/business/Dashboard";
 import Booking from "../pages/Booking";
+import CleaningBooking from "../pages/CleaningBooking";
 
 import Overview from "../pages/owner/Overview";
 import AddService from "../pages/owner/AddService";
@@ -17,6 +18,7 @@ import Gallery from "../pages/owner/Gallery";
 import Reviews from "../pages/owner/Reviews";
 import Settings from "../pages/owner/Settings";
 import Subscription from "../pages/owner/Subscription";
+import MembershipPlans from "../pages/owner/MembershipPlans";
 
 import ProtectedRoute from "../core/auth/ProtectedRoute";
 
@@ -56,6 +58,15 @@ export function businessRoutes() {
         element={
           <ProtectedRoute>
             <Booking />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/cleaning-booking"
+        element={
+          <ProtectedRoute>
+            <CleaningBooking />
           </ProtectedRoute>
         }
       />
@@ -171,6 +182,15 @@ export function businessRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/business-dashboard/membership-plans"
+        element={
+          <ProtectedRoute>
+            <MembershipPlans />
+          </ProtectedRoute>
+        }
+      />
     </>
   );
 }
+

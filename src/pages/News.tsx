@@ -1,289 +1,571 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import { useLanguage } from "../context/LanguageContext";
 import { supabase } from "../lib/supabase";
 
-type NewsItem = {
+import "./News.css";
+
+type NewsArticle = {
   id: string;
   title: string;
-  content: string;
-  image: string;
-  category: string;
-  author: string;
-  published: boolean;
+  summary: string | null;
+  content: string | null;
+  image: string | null;
+  author: string | null;
+  category: string | null;
+  published: boolean | null;
+  created_at: string | null;
+  source_name: string | null;
+  source_url: string | null;
+  source_published_at: string | null;
+  scouted_at: string | null;
 };
 
-function News() {
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [category, setCategory] = useState("");
-  const [loading, setLoading] = useState(true);
+const CATEGORY_KEYS = [
+  {
+    value: "All",
+    key: "newsCategoryAll",
+  },
+  {
+    value: "Local & Community",
+    key: "newsCategoryLocalCommunity",
+  },
+  {
+    value: "Cameroon",
+    key: "newsCategoryCameroon",
+  },
+  {
+    value: "Africa",
+    key: "newsCategoryAfrica",
+  },
+  {
+    value: "World",
+    key: "newsCategoryWorld",
+  },
+  {
+    value: "Politics",
+    key: "newsCategoryPolitics",
+  },
+  {
+    value: "Business & Finance",
+    key: "newsCategoryBusinessFinance",
+  },
+  {
+    value: "Sports",
+    key: "newsCategorySports",
+  },
+  {
+    value: "Technology",
+    key: "newsCategoryTechnology",
+  },
+  {
+    value: "Education",
+    key: "newsCategoryEducation",
+  },
+  {
+    value: "Jobs & Opportunities",
+    key: "newsCategoryJobs",
+  },
+  {
+    value: "Transport",
+    key: "newsCategoryTransport",
+  },
+  {
+    value: "Health",
+    key: "newsCategoryHealth",
+  },
+  {
+    value: "Other",
+    key: "newsCategoryOther",
+  },
+] as const;
 
-  useEffect(() => {
-    loadNews();
-  }, []);
+function formatDate(
+  value: string | null,
+  language: "en" | "fr"
+) {
+  if (!value) return "";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat(
+    language === "fr" ? "fr-FR" : "en-GB",
+    {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }
+  ).format(date);
+}
+
+function getCategoryLabel(
+  category: string | null,
+  translations: Record<string, string>
+) {
+  const item = CATEGORY_KEYS.find(
+    (entry) => entry.value === category
+  );
+
+  if (!item) {
+    return category || translations.newsCategoryOther;
+  }
+
+  return (
+    translations[
+      item.key as keyof typeof translations
+    ] || category || translations.newsCategoryOther
+  );
+}
+
+export default function News() {
+  const { language, t } = useLanguage();
+
+  const [articles, setArticles] =
+    useState<NewsArticle[]>([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  const [search, setSearch] =
+    useState("");
+
+  const [category, setCategory] =
+    useState("All");
+
+  const [selectedArticle, setSelectedArticle] =
+    useState<NewsArticle | null>(null);
 
   async function loadNews() {
     setLoading(true);
+    setError(null);
 
-    const { data, error } = await supabase
-      .from("news")
-      .select(
-        "id,title,content,image,category,author,published"
-      )
-      .eq("published", true)
-      .order("title", { ascending: true });
+    try {
+      const { data, error: queryError } =
+        await supabase
+          .from("news")
+          .select(
+            [
+              "id",
+              "title",
+              "summary",
+              "content",
+              "image",
+              "author",
+              "category",
+              "published",
+              "created_at",
+              "source_name",
+              "source_url",
+              "source_published_at",
+              "scouted_at",
+            ].join(",")
+          )
+          .eq("published", true)
+          .order("scouted_at", {
+            ascending: false,
+            nullsFirst: false,
+          })
+          .order("created_at", {
+            ascending: false,
+          });
 
-    if (error) {
-      console.error("Unable to load news:", error);
-      setNews([]);
+      if (queryError) {
+        throw queryError;
+      }
+
+      setArticles(
+        Array.isArray(data)
+          ? (data as unknown as NewsArticle[])
+          : []
+      );
+    } catch (loadError) {
+      console.error(
+        "News loading error:",
+        loadError
+      );
+
+      setError(t.newsLoadError);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setNews((data || []) as NewsItem[]);
-    setLoading(false);
   }
 
-  const categories = useMemo(() => {
-    return [
-      ...new Set(
-        news
-          .map((item) => item.category)
-          .filter(Boolean)
-      ),
-    ];
-  }, [news]);
+  useEffect(() => {
+    void loadNews();
+  }, []);
 
-  const filteredNews = useMemo(() => {
-    if (!category) {
-      return news;
-    }
+  const filteredArticles = useMemo(() => {
+    const normalizedSearch =
+      search.trim().toLowerCase();
 
-    return news.filter(
-      (item) => item.category === category
-    );
-  }, [news, category]);
+    return articles.filter((article) => {
+      const matchesCategory =
+        category === "All" ||
+        article.category === category;
+
+      if (!matchesCategory) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      const searchableText = [
+        article.title,
+        article.summary,
+        article.content,
+        article.source_name,
+        article.category,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(
+        normalizedSearch
+      );
+    });
+  }, [articles, category, search]);
+
+  const categoryButtons = CATEGORY_KEYS;
 
   return (
-    <>
-
-      <main
-        style={{
-          minHeight: "100vh",
-          background: "#f7faf9",
-          fontFamily: "Arial, Helvetica, sans-serif",
-        }}
-      >
-        <section
-          style={{
-            background:
-              "linear-gradient(135deg,#003b36,#087568)",
-            color: "white",
-            padding: "55px 24px",
-          }}
-        >
-          <div
-            style={{
-              maxWidth: "1150px",
-              margin: "0 auto",
-            }}
-          >
-            <p
-              style={{
-                margin: "0 0 10px",
-                color: "#9ff2e9",
-                fontSize: "12px",
-                fontWeight: 700,
-                letterSpacing: "2px",
-                textTransform: "uppercase",
-              }}
-            >
-              Every Day Connect
-            </p>
-
-            <h1
-              style={{
-                fontSize: "clamp(36px,6vw,58px)",
-                margin: 0,
-              }}
-            >
-              Daily Bamenda News
-            </h1>
-
-            <p
-              style={{
-                maxWidth: "700px",
-                fontSize: "18px",
-                lineHeight: 1.7,
-                color: "#e5fffb",
-              }}
-            >
-              Stay informed about what is happening around
-              Bamenda and discover useful stories, community
-              information, events and local developments.
-            </p>
+    <main className="news-page">
+      <section className="news-hero">
+        <div className="news-hero-inner">
+          <div className="news-eyebrow">
+            {t.newsAiSummary}
           </div>
-        </section>
 
-        <section
-          style={{
-            maxWidth: "1150px",
-            margin: "0 auto",
-            padding: "40px 24px 80px",
-          }}
-        >
-          {categories.length > 0 && (
-            <div
-              style={{
-                display: "flex",
-                gap: "9px",
-                flexWrap: "wrap",
-                marginBottom: "28px",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setCategory("")}
-                style={categoryButtonStyle(!category)}
-              >
-                All
-              </button>
+          <h1>{t.newsPageTitle}</h1>
 
-              {categories.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setCategory(item)}
-                  style={categoryButtonStyle(
-                    category === item
-                  )}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
+          <p>
+            {t.newsPageSubtitle}
+          </p>
+
+          <div className="news-search-wrap">
+            <input
+              type="search"
+              value={search}
+              onChange={(event) =>
+                setSearch(event.target.value)
+              }
+              placeholder={
+                t.newsSearchPlaceholder
+              }
+              aria-label={
+                t.newsSearchPlaceholder
+              }
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="news-content">
+        <div className="news-section-heading">
+          <div>
+            <span className="news-section-label">
+              {t.newsLatest}
+            </span>
+
+            <h2>{t.newsPageTitle}</h2>
+          </div>
+
+          {!loading && (
+            <span className="news-count">
+              {filteredArticles.length}
+            </span>
           )}
+        </div>
 
-          {loading && (
-            <p style={{ color: "#61716e" }}>
-              Loading today's news...
-            </p>
-          )}
-
-          {!loading && filteredNews.length === 0 && (
-            <div
-              style={{
-                background: "white",
-                padding: "45px",
-                borderRadius: "16px",
-                textAlign: "center",
-              }}
+        <div className="news-category-row">
+          {categoryButtons.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              className={
+                category === item.value
+                  ? "news-category active"
+                  : "news-category"
+              }
+              onClick={() =>
+                setCategory(item.value)
+              }
             >
-              <h2 style={{ color: "#123c37" }}>
-                No published news yet
-              </h2>
+              {t[
+                item.key as keyof typeof t
+              ] || item.value}
+            </button>
+          ))}
+        </div>
 
-              <p style={{ color: "#61716e" }}>
-                Check back soon for updates from Every Day
-                Connect.
+        {loading && (
+          <div className="news-state">
+            <div className="news-loader" />
+            <p>{t.newsLoading}</p>
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="news-state news-error">
+            <h3>{t.newsLoadError}</h3>
+            <button
+              type="button"
+              onClick={() => void loadNews()}
+            >
+              {t.newsTryAgain}
+            </button>
+          </div>
+        )}
+
+        {!loading &&
+          !error &&
+          filteredArticles.length === 0 && (
+            <div className="news-state">
+              <div className="news-empty-mark">
+                NEWS
+              </div>
+
+              <h3>{t.newsNoArticles}</h3>
+              <p>
+                {search || category !== "All"
+                  ? t.newsNoMatchingArticles
+                  : t.newsNoArticlesDescription}
               </p>
             </div>
           )}
 
-          {!loading && filteredNews.length > 0 && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns:
-                  "repeat(auto-fit,minmax(280px,1fr))",
-                gap: "22px",
-              }}
-            >
-              {filteredNews.map((item) => (
+        {!loading &&
+          !error &&
+          filteredArticles.length > 0 && (
+            <div className="news-grid">
+              {filteredArticles.map((article) => (
                 <article
-                  key={item.id}
-                  style={{
-                    background: "white",
-                    borderRadius: "16px",
-                    overflow: "hidden",
-                    border: "1px solid #e4ece9",
-                    boxShadow:
-                      "0 5px 18px rgba(0,59,54,0.06)",
+                  key={article.id}
+                  className="news-card"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() =>
+                    setSelectedArticle(article)
+                  }
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" ||
+                      event.key === " "
+                    ) {
+                      event.preventDefault();
+                      setSelectedArticle(article);
+                    }
                   }}
                 >
-                  <img
-                    src={
-                      item.image ||
-                      "https://placehold.co/800x450?text=Every+Day+Connect"
-                    }
-                    alt={item.title}
-                    style={{
-                      width: "100%",
-                      height: "190px",
-                      objectFit: "cover",
-                      display: "block",
-                    }}
-                  />
+                  <div className="news-card-top">
+                    {article.image ? (
+                      <img
+                        src={article.image}
+                        alt=""
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="news-card-image-placeholder">
+                        <span>
+                          {getCategoryLabel(
+                            article.category,
+                            t
+                          )}
+                        </span>
+                      </div>
+                    )}
 
-                  <div style={{ padding: "22px" }}>
-                    <span
-                      style={{
-                        color: "#087568",
-                        fontSize: "12px",
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {item.category || "Community"}
-                    </span>
+                    <div className="news-card-overlay">
+                      <span>
+                        {getCategoryLabel(
+                          article.category,
+                          t
+                        )}
+                      </span>
+                    </div>
+                  </div>
 
-                    <h2
-                      style={{
-                        color: "#123c37",
-                        fontSize: "22px",
-                        lineHeight: 1.25,
-                        margin: "9px 0 12px",
-                      }}
-                    >
-                      {item.title}
-                    </h2>
+                  <div className="news-card-body">
+                    <div className="news-card-meta">
+                      <span>
+                        {article.source_name ||
+                          t.newsSource}
+                      </span>
 
-                    <p
-                      style={{
-                        color: "#61716e",
-                        lineHeight: 1.65,
-                        marginBottom: "18px",
-                      }}
-                    >
-                      {item.content}
+                      <span>
+                        {formatDate(
+                          article.source_published_at ||
+                            article.created_at,
+                          language
+                        )}
+                      </span>
+                    </div>
+
+                    <h3>{article.title}</h3>
+
+                    <p>
+                      {article.summary ||
+                        t.newsNoSummary}
                     </p>
 
-                    <small style={{ color: "#899793" }}>
-                      {item.author
-                        ? `By ${item.author}`
-                        : "Every Day Connect"}
-                    </small>
+                    <div className="news-card-footer">
+                      <span className="news-ai-badge">
+                        {t.newsAiSummary}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedArticle(
+                            article
+                          )
+                        }
+                      >
+                        {t.newsReadMore}
+                      </button>
+                    </div>
                   </div>
                 </article>
               ))}
             </div>
           )}
-        </section>
-      </main>
-    </>
+      </section>
+
+      {selectedArticle && (
+        <div
+          className="news-modal-backdrop"
+          role="presentation"
+          onMouseDown={() =>
+            setSelectedArticle(null)
+          }
+        >
+          <article
+            className="news-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="news-modal-title"
+            onMouseDown={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <button
+              type="button"
+              className="news-modal-close"
+              onClick={() =>
+                setSelectedArticle(null)
+              }
+              aria-label={t.newsClose}
+            >
+              X
+            </button>
+
+            {selectedArticle.image && (
+              <img
+                className="news-modal-image"
+                src={selectedArticle.image}
+                alt=""
+              />
+            )}
+
+            <div className="news-modal-content">
+              <div className="news-modal-category">
+                {getCategoryLabel(
+                  selectedArticle.category,
+                  t
+                )}
+              </div>
+
+              <h2 id="news-modal-title">
+                {selectedArticle.title}
+              </h2>
+
+              <div className="news-modal-meta">
+                <span>
+                  {selectedArticle.source_name ||
+                    t.newsSource}
+                </span>
+
+                <span>
+                  {formatDate(
+                    selectedArticle.source_published_at ||
+                      selectedArticle.created_at,
+                    language
+                  )}
+                </span>
+              </div>
+
+              <div className="news-modal-summary">
+                <strong>
+                  {t.newsAiSummary}
+                </strong>
+
+                <p>
+                  {selectedArticle.summary ||
+                    t.newsNoSummary}
+                </p>
+              </div>
+
+              <div className="news-modal-content-text">
+                {(selectedArticle.content ||
+                  t.newsNoContent)
+                  .split(/\n+/)
+                  .filter(Boolean)
+                  .map((paragraph, index) => (
+                    <p key={`${selectedArticle.id}-${index}`}>
+                      {paragraph}
+                    </p>
+                  ))}
+              </div>
+
+              <div className="news-source-box">
+                <div>
+                  <span>
+                    {t.newsSource}
+                  </span>
+
+                  <strong>
+                    {selectedArticle.source_name ||
+                      t.newsOriginalSource}
+                  </strong>
+                </div>
+
+                {selectedArticle.source_url && (
+                  <a
+                    href={
+                      selectedArticle.source_url
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {t.newsOriginalSource}
+                  </a>
+                )}
+              </div>
+
+              <div className="news-modal-date">
+                {t.newsScouted}:{" "}
+                {formatDate(
+                  selectedArticle.scouted_at,
+                  language
+                )}
+              </div>
+            </div>
+          </article>
+        </div>
+      )}
+    </main>
   );
 }
-
-function categoryButtonStyle(active: boolean) {
-  return {
-    border: active
-      ? "1px solid #087568"
-      : "1px solid #d5e1de",
-    background: active ? "#087568" : "white",
-    color: active ? "white" : "#35504b",
-    borderRadius: "999px",
-    padding: "9px 15px",
-    cursor: "pointer",
-    fontWeight: 600,
-  };
-}
-
-export default News;

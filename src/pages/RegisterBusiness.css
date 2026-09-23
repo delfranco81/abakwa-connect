@@ -139,3 +139,160 @@
     height: 360px;
   }
 }
+/* Add these rules to src/pages/RegisterBusiness.css */
+
+.register-business-services {
+  margin-top: 2rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 16px;
+}
+
+.register-business-services h2 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.register-business-services > p {
+  margin-bottom: 1rem;
+}
+
+.register-business-service-card {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+}
+
+.register-business-service-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.register-business-service-header h3 {
+  margin: 0;
+}
+
+.register-business-service-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.register-business-service-grid > div {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .register-business-service-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .register-business-service-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* Add these rules to src/pages/RegisterBusiness.css */
+
+.register-business-services {
+  margin-top: 2rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 16px;
+}
+
+.register-business-services h2 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.register-business-services > p {
+  margin-bottom: 1rem;
+}
+
+.register-business-service-card {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+}
+
+.register-business-service-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.register-business-service-header h3 {
+  margin: 0;
+}
+
+.register-business-service-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.register-business-service-grid > div {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .register-business-service-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .register-business-service-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+
+
+
+/* Register Business submit button */
+.register-business-submit-wrap {
+  width: 100%;
+  margin-top: 28px;
+  padding-bottom: 20px;
+}
+
+.register-business-submit {
+  display: block !important;
+  width: 100% !important;
+  min-height: 52px !important;
+  margin-top: 20px !important;
+  padding: 14px 20px !important;
+  box-sizing: border-box;
+  background: #0099ff !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-family: inherit !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  text-align: center !important;
+  text-indent: 0 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  cursor: pointer !important;
+}
+
+.register-business-submit:hover {
+  opacity: 0.92;
+}
+
+.register-business-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+

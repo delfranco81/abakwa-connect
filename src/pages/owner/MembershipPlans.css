@@ -1,0 +1,790 @@
+.ec-membership-admin,
+.ec-membership-admin * {
+  box-sizing: border-box;
+}
+
+.ec-membership-admin {
+  min-height: calc(100vh - 80px);
+  background:
+    radial-gradient(circle at 50% -10%, rgba(16, 185, 129, 0.09), transparent 36%),
+    #0d1112;
+  color: #f5f7f7;
+  padding: 42px 20px 70px;
+}
+
+.ec-membership-admin .ec-admin-shell {
+  width: min(1080px, 100%);
+  margin: 0 auto;
+}
+
+.ec-membership-admin .ec-admin-heading h1,
+.ec-membership-admin .ec-admin-heading h2,
+.ec-membership-admin .ec-admin-heading h3,
+.ec-membership-admin h1,
+.ec-membership-admin h2,
+.ec-membership-admin h3 {
+  color: #fff;
+}
+
+.ec-membership-admin .ec-admin-heading h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.ec-membership-admin .ec-admin-heading p {
+  margin: 7px 0 0;
+  color: #99a4a4;
+}
+
+.ec-membership-admin .ec-admin-heading p:last-child {
+  color: #34d399;
+  font-weight: 700;
+}
+
+.ec-membership-admin .ec-admin-alert {
+  margin: 18px 0;
+  border-radius: 12px;
+  padding: 13px 15px;
+}
+
+.ec-membership-admin .ec-admin-error {
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  background: rgba(248, 113, 113, 0.08);
+  color: #fecaca;
+}
+
+.ec-membership-admin .ec-admin-success {
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  background: rgba(52, 211, 153, 0.08);
+  color: #a7f3d0;
+}
+
+.ec-membership-admin .ec-admin-card,
+.ec-membership-admin .ec-admin-list {
+  border: 1px solid #303a3a;
+  border-radius: 18px;
+  background: #171c1d;
+  box-shadow: 0 18px 45px rgba(0,0,0,.2);
+}
+
+.ec-membership-admin .ec-admin-card {
+  padding: 26px;
+}
+
+.ec-membership-admin .ec-admin-card h2,
+.ec-membership-admin .ec-admin-list h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.ec-membership-admin .ec-admin-card p,
+.ec-membership-admin .ec-admin-list > div:first-child p {
+  color: #929e9e;
+}
+
+.ec-membership-admin form {
+  margin-top: 22px;
+}
+
+.ec-membership-admin .ec-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.ec-membership-admin .ec-field {
+  min-width: 0;
+}
+
+.ec-membership-admin .ec-field label {
+  display: block;
+  margin-bottom: 7px;
+  color: #dce2e2;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.ec-membership-admin .ec-field input,
+.ec-membership-admin .ec-field select,
+.ec-membership-admin .ec-field textarea {
+  width: 100%;
+  border: 1px solid #394444;
+  border-radius: 10px;
+  padding: 12px 13px;
+  background: #101516;
+  color: #fff;
+  font: inherit;
+  font-size: 0.88rem;
+  outline: none;
+}
+
+.ec-membership-admin .ec-field textarea {
+  min-height: 105px;
+  resize: vertical;
+}
+
+.ec-membership-admin .ec-field input:focus,
+.ec-membership-admin .ec-field select:focus,
+.ec-membership-admin .ec-field textarea:focus {
+  border-color: #34d399;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.07);
+}
+
+.ec-membership-admin .ec-field input:disabled {
+  opacity: .55;
+}
+
+.ec-membership-admin .ec-full-field {
+  margin-top: 18px;
+}
+
+.ec-membership-admin .ec-settings-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+  border: 1px solid #303a3a;
+  border-radius: 13px;
+  padding: 15px;
+  background: #121718;
+}
+
+.ec-membership-admin .ec-setting {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #dce2e2;
+}
+
+.ec-membership-admin .ec-setting input {
+  width: 17px;
+  height: 17px;
+  margin-top: 2px;
+  accent-color: #34d399;
+}
+
+.ec-membership-admin .ec-setting span span:first-child {
+  display: block;
+  font-weight: 750;
+}
+
+.ec-membership-admin .ec-setting span span:last-child {
+  display: block;
+  margin-top: 4px;
+  color: #7f8b8b;
+  font-size: .75rem;
+  line-height: 1.45;
+}
+
+.ec-membership-admin .ec-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.ec-membership-admin button {
+  border-radius: 10px;
+  padding: 11px 17px;
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ec-membership-admin .ec-primary-button {
+  border: 0;
+  background: #34d399;
+  color: #07130f;
+}
+
+.ec-membership-admin .ec-primary-button:hover {
+  background: #6ee7b7;
+}
+
+.ec-membership-admin .ec-secondary-button {
+  border: 1px solid #465252;
+  background: transparent;
+  color: #dbe2e2;
+}
+
+.ec-membership-admin .ec-admin-list {
+  margin-top: 22px;
+  overflow: hidden;
+}
+
+.ec-membership-admin .ec-list-heading {
+  padding: 22px 25px;
+  border-bottom: 1px solid #303a3a;
+}
+
+.ec-membership-admin .ec-plan-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 25px;
+  border-bottom: 1px solid #293333;
+}
+
+.ec-membership-admin .ec-plan-row:last-child {
+  border-bottom: 0;
+}
+
+.ec-membership-admin .ec-plan-info {
+  min-width: 0;
+}
+
+.ec-membership-admin .ec-plan-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.ec-membership-admin .ec-plan-title h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.ec-membership-admin .ec-status {
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: .68rem;
+  font-weight: 800;
+}
+
+.ec-membership-admin .ec-status.published {
+  background: rgba(52, 211, 153, .13);
+  color: #6ee7b7;
+}
+
+.ec-membership-admin .ec-status.inactive {
+  background: rgba(148, 163, 184, .12);
+  color: #aab4b4;
+}
+
+.ec-membership-admin .ec-plan-description {
+  margin: 6px 0 0;
+  color: #a0aaaa;
+  font-size: .83rem;
+}
+
+.ec-membership-admin .ec-plan-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+  color: #7f8b8b;
+  font-size: .72rem;
+}
+
+.ec-membership-admin .ec-plan-benefits {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: #aeb7b7;
+  font-size: .8rem;
+}
+
+.ec-membership-admin .ec-edit-button {
+  flex: 0 0 auto;
+  border: 1px solid #465252;
+  background: #111718;
+  color: #dbe2e2;
+}
+
+.ec-membership-admin .ec-empty {
+  padding: 32px 25px;
+  color: #8e9999;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .ec-membership-admin {
+    padding: 28px 14px 50px;
+  }
+
+  .ec-membership-admin .ec-form-grid,
+  .ec-membership-admin .ec-settings-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ec-membership-admin .ec-plan-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ec-membership-admin .ec-form-actions {
+    justify-content: stretch;
+  }
+
+  .ec-membership-admin .ec-form-actions button {
+    flex: 1;
+  }
+}
+/* Fallback selectors for the existing MembershipPlans JSX structure. */
+.ec-membership-admin > div {
+  width: min(1080px, 100%);
+  margin: 0 auto;
+}
+
+.ec-membership-admin > div > div:first-child h1 {
+  margin: 0;
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.ec-membership-admin > div > div:first-child p {
+  color: #929e9e;
+}
+
+.ec-membership-admin > div > div:nth-child(3) {
+  padding: 26px;
+  border: 1px solid #303a3a;
+  border-radius: 18px;
+  background: #171c1d;
+  box-shadow: 0 18px 45px rgba(0,0,0,.2);
+}
+
+.ec-membership-admin form {
+  margin-top: 22px;
+}
+
+.ec-membership-admin form > div:nth-child(1),
+.ec-membership-admin form > div:nth-child(3) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 18px;
+}
+
+.ec-membership-admin form > div:nth-child(2),
+.ec-membership-admin form > div:nth-child(4) {
+  margin-top: 18px;
+}
+
+.ec-membership-admin form > div:nth-child(5) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 14px;
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px solid #303a3a;
+  border-radius: 13px;
+  background: #121718;
+}
+
+.ec-membership-admin label {
+  color: #dce2e2;
+  font-size: .85rem;
+  font-weight: 700;
+}
+
+.ec-membership-admin form input:not([type="checkbox"]),
+.ec-membership-admin form select,
+.ec-membership-admin form textarea {
+  width: 100%;
+  border: 1px solid #394444;
+  border-radius: 10px;
+  padding: 12px 13px;
+  background: #101516;
+  color: #fff;
+  font: inherit;
+  font-size: .88rem;
+  outline: none;
+}
+
+.ec-membership-admin form textarea {
+  min-height: 105px;
+  resize: vertical;
+}
+
+.ec-membership-admin form input:not([type="checkbox"]):focus,
+.ec-membership-admin form select:focus,
+.ec-membership-admin form textarea:focus {
+  border-color: #34d399;
+}
+
+.ec-membership-admin form > div:nth-child(5) label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ec-membership-admin form > div:nth-child(5) input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  margin-top: 2px;
+  accent-color: #34d399;
+}
+
+.ec-membership-admin form > div:nth-child(6) {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.ec-membership-admin form > div:nth-child(6) button {
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 18px;
+  background: #34d399;
+  color: #07130f;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ec-membership-admin > div > div:last-child {
+  margin-top: 22px;
+  overflow: hidden;
+  border: 1px solid #303a3a;
+  border-radius: 18px;
+  background: #171c1d;
+}
+
+.ec-membership-admin > div > div:last-child > div:first-child {
+  padding: 22px 25px;
+  border-bottom: 1px solid #303a3a;
+}
+
+.ec-membership-admin > div > div:last-child > div:first-child h2 {
+  margin: 0;
+  color: #fff;
+  font-weight: 800;
+}
+
+.ec-membership-admin > div > div:last-child > div:not(:first-child) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 25px;
+  border-bottom: 1px solid #293333;
+}
+
+.ec-membership-admin > div > div:last-child > div:not(:first-child) h3 {
+  margin: 0;
+  color: #fff;
+}
+
+.ec-membership-admin > div > div:last-child > div:not(:first-child) p {
+  color: #9aa5a5;
+}
+
+.ec-membership-admin > div > div:last-child button {
+  flex: 0 0 auto;
+  border: 1px solid #465252;
+  border-radius: 10px;
+  padding: 10px 15px;
+  background: #111718;
+  color: #dbe2e2;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 720px) {
+  .ec-membership-admin form > div:nth-child(1),
+  .ec-membership-admin form > div:nth-child(3),
+  .ec-membership-admin form > div:nth-child(5) {
+    grid-template-columns: 1fr;
+  }
+
+  .ec-membership-admin > div > div:last-child > div:not(:first-child) {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+/* ---------------------------------------------------------
+   Final Membership Plans form polish
+   --------------------------------------------------------- */
+
+.ec-membership-admin {
+  color: #f5f7f7;
+}
+
+.ec-membership-admin > .ec-admin-shell > div:first-child {
+  margin-bottom: 24px;
+}
+
+.ec-membership-admin > .ec-admin-shell > div:first-child h1 {
+  color: #fff;
+}
+
+.ec-membership-admin form > div:first-child,
+.ec-membership-admin form > div:nth-child(3) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.ec-membership-admin form > div:first-child > div,
+.ec-membership-admin form > div:nth-child(2) > div,
+.ec-membership-admin form > div:nth-child(3) > div,
+.ec-membership-admin form > div:nth-child(4) > div {
+  min-width: 0;
+}
+
+.ec-membership-admin form > div:nth-child(2),
+.ec-membership-admin form > div:nth-child(4) {
+  margin-top: 18px;
+}
+
+.ec-membership-admin form label {
+  color: #dce4e4;
+}
+
+.ec-membership-admin form input:not([type="checkbox"]),
+.ec-membership-admin form select,
+.ec-membership-admin form textarea {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  border: 1px solid #3b4747;
+  border-radius: 10px;
+  padding: 11px 13px;
+  background: #101516;
+  color: #fff;
+  font: inherit;
+  outline: none;
+}
+
+.ec-membership-admin form textarea {
+  min-height: 110px;
+  line-height: 1.5;
+}
+
+.ec-membership-admin form input:not([type="checkbox"]):focus,
+.ec-membership-admin form select:focus,
+.ec-membership-admin form textarea:focus {
+  border-color: #34d399;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, .08);
+}
+
+.ec-membership-admin form > div:nth-child(5) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid #303a3a;
+  border-radius: 14px;
+  background: #121718;
+}
+
+.ec-membership-admin form > div:nth-child(5) label {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+  margin: 0;
+  color: #e3e9e9;
+  line-height: 1.45;
+}
+
+.ec-membership-admin form > div:nth-child(5) label input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: #34d399;
+}
+
+.ec-membership-admin form > div:nth-child(5) label span {
+  min-width: 0;
+}
+
+.ec-membership-admin form > div:nth-child(5) label span > span:first-child {
+  display: block;
+  color: #f4f7f7;
+  font-weight: 800;
+}
+
+.ec-membership-admin form > div:nth-child(5) label span > span:last-child {
+  display: block;
+  margin-top: 5px;
+  color: #899595;
+  font-size: .78rem;
+  line-height: 1.5;
+}
+
+.ec-membership-admin form > div:nth-child(6) {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.ec-membership-admin form > div:nth-child(6) button {
+  min-width: 150px;
+  border: 0;
+  border-radius: 10px;
+  padding: 12px 18px;
+  background: #34d399;
+  color: #07130f;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ec-membership-admin form > div:nth-child(6) button:hover {
+  background: #6ee7b7;
+}
+
+.ec-membership-admin > .ec-admin-shell > div:last-child {
+  margin-top: 24px;
+}
+
+.ec-membership-admin > .ec-admin-shell > div:last-child > div:first-child {
+  padding: 22px 24px;
+}
+
+.ec-membership-admin > .ec-admin-shell > div:last-child > div:first-child h2 {
+  color: #fff;
+}
+
+.ec-membership-admin > .ec-admin-shell > div:last-child > div:last-child > div {
+  padding: 20px 24px;
+  border-bottom: 1px solid #303a3a;
+}
+
+.ec-membership-admin > .ec-admin-shell > div:last-child button {
+  border: 1px solid #465252;
+  border-radius: 10px;
+  padding: 10px 16px;
+  background: transparent;
+  color: #dbe4e4;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ec-membership-admin > .ec-admin-shell > div:last-child button:hover {
+  border-color: #34d399;
+  color: #34d399;
+}
+
+@media (max-width: 700px) {
+  .ec-membership-admin {
+    padding: 28px 14px 50px;
+  }
+
+  .ec-membership-admin form > div:first-child,
+  .ec-membership-admin form > div:nth-child(3),
+  .ec-membership-admin form > div:nth-child(5) {
+    grid-template-columns: 1fr;
+  }
+
+  .ec-membership-admin form > div:nth-child(6) {
+    justify-content: stretch;
+  }
+
+  .ec-membership-admin form > div:nth-child(6) button {
+    width: 100%;
+  }
+}
+/* ============================================================
+   FINAL MEMBERSHIP SETTINGS PRESENTATION
+   ============================================================ */
+
+.ec-membership-admin .ec-settings-row {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+  margin-top: 24px !important;
+  padding: 18px !important;
+  border: 1px solid #344141 !important;
+  border-radius: 16px !important;
+  background: #111718 !important;
+}
+
+.ec-membership-admin .ec-setting {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 13px !important;
+  min-width: 0 !important;
+  padding: 17px !important;
+  border: 1px solid #344141 !important;
+  border-radius: 13px !important;
+  background: #18201f !important;
+}
+
+.ec-membership-admin .ec-setting:first-child {
+  border-color: rgba(52, 211, 153, .45) !important;
+  background: rgba(52, 211, 153, .07) !important;
+}
+
+.ec-membership-admin .ec-setting:last-child {
+  border-color: rgba(96, 165, 250, .38) !important;
+  background: rgba(59, 130, 246, .06) !important;
+}
+
+.ec-membership-admin .ec-setting input[type="checkbox"] {
+  flex: 0 0 auto !important;
+  width: 19px !important;
+  height: 19px !important;
+  margin: 2px 0 0 !important;
+}
+
+.ec-membership-admin .ec-setting > span {
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+.ec-membership-admin .ec-setting span span:first-child {
+  display: block !important;
+  color: #ffffff !important;
+  font-size: .94rem !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+.ec-membership-admin .ec-setting span span:last-child {
+  display: block !important;
+  margin-top: 7px !important;
+  color: #9eaaaa !important;
+  font-size: .78rem !important;
+  line-height: 1.55 !important;
+}
+
+.ec-membership-admin .ec-form-actions {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin-top: 22px !important;
+}
+
+.ec-membership-admin .ec-form-actions button {
+  min-width: 150px !important;
+}
+
+@media (max-width: 760px) {
+  .ec-membership-admin .ec-settings-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ec-membership-admin .ec-form-actions {
+    flex-direction: column !important;
+  }
+
+  .ec-membership-admin .ec-form-actions button {
+    width: 100% !important;
+  }
+}
+
+/* Make the existing-plan area read as a proper dashboard list. */
+.ec-membership-admin .ec-admin-list {
+  overflow: hidden !important;
+}
+
+.ec-membership-admin .ec-admin-list > div {
+  min-width: 0 !important;
+}
+
+/* Prevent long descriptions from destroying the card/list layout. */
+.ec-membership-admin .ec-admin-list p {
+  overflow-wrap: anywhere !important;
+}

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -418,6 +418,13 @@ function Dashboard() {
                   action={
                     t.businessDashboardManageSubscriptionAction
                   }
+                />
+
+                <ManagementCard
+                  title={t.businessMembershipPlansTitle}
+                  description={t.businessMembershipPlansDescription}
+                  href={`/business-dashboard/membership-plans?businessId=${business.id}`}
+                  action={t.businessMembershipPlansEditButton}
                 />
               </div>
             </section>

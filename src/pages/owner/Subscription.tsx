@@ -1,188 +1,243 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+
 import { useLanguage } from "@/context/LanguageContext";
-
+import { supabase } from "@/core/database/supabase";
+import { businessMembershipService } from "@/services/business/BusinessMembershipService";
+import { businessPaymentAccountService } from "@/services/business/BusinessPaymentAccountService";
 import {
-  businessMembershipService,
+  businessMembershipPaymentService,
+} from "@/services/payment/BusinessMembershipPaymentService";
+import {
+  businessMembershipPlanService,
   type BusinessMembershipPlan,
-  type BusinessMembership,
-} from "@/services/business/BusinessMembershipService";
-
-import {
-  businessPaymentAccountService,
-  type BusinessPaymentAccount,
-} from "@/services/business/BusinessPaymentAccountService";
-
-import { businessMembershipPaymentService } from "@/services/payment/BusinessMembershipPaymentService";
+} from "@/services/subscription/BusinessMembershipPlanService";
 import type { PaymentMethod } from "@/services/payment/PaymentTypes";
+import "./BusinessSubscription.css";
+
+type BusinessRecord = {
+  id: string;
+  name: string;
+};
+
+type MembershipRecord = {
+  id: string;
+  status: string;
+  expiresAt?: string | null;
+};
 
 export default function Subscription() {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [searchParams] = useSearchParams();
 
   const businessId = searchParams.get("businessId")?.trim() ?? "";
 
+  const [business, setBusiness] = useState<BusinessRecord | null>(null);
   const [plans, setPlans] = useState<BusinessMembershipPlan[]>([]);
-  const [paymentAccounts, setPaymentAccounts] = useState<
-    BusinessPaymentAccount[]
-  >([]);
-  const [membership, setMembership] =
-    useState<BusinessMembership | null>(null);
-
-  const [selectedPlanId, setSelectedPlanId] = useState("");
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
   const [selectedPaymentAccountId, setSelectedPaymentAccountId] =
-    useState("");
-
-  const [paymentMethod, setPaymentMethod] =
-    useState<PaymentMethod>("mtn");
-
+    useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("mtn");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [membership, setMembership] = useState<MembershipRecord | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [messageType, setMessageType] = useState<"success" | "error" | "">("");
 
-  useEffect(() => {
-    if (!businessId) {
-      setLoading(false);
-      return;
+  const selectedPlan = useMemo(
+    () => plans.find((plan) => plan.id === selectedPlanId) ?? null,
+    [plans, selectedPlanId]
+  );
+
+  const selectedPaymentAccount = useMemo(
+    () =>
+      paymentAccounts.find(
+        (account) => account.id === selectedPaymentAccountId
+      ) ?? null,
+    [paymentAccounts, selectedPaymentAccountId]
+  );
+
+  const billingLabel = (plan: BusinessMembershipPlan) => {
+    if (plan.billingType === "free") {
+      return t.businessSubscriptionFree;
     }
 
-    void loadSubscriptionData();
-  }, [businessId]);
+    if (plan.billingType === "monthly") {
+      return t.businessSubscriptionMonthly;
+    }
 
-  async function loadSubscriptionData() {
+    if (plan.billingType === "yearly") {
+      return t.businessSubscriptionYearly;
+    }
+
+    if (plan.billingType === "one_time") {
+      return t.businessSubscriptionOneTime;
+    }
+
+    return t.businessSubscriptionInviteOnly;
+  };
+
+  const billingSuffix = (plan: BusinessMembershipPlan) => {
+    if (plan.billingType === "monthly") {
+      return t.businessSubscriptionPerMonth;
+    }
+
+    if (plan.billingType === "yearly") {
+      return t.businessSubscriptionPerYear;
+    }
+
+    return "";
+  };
+
+  const loadData = async () => {
     setLoading(true);
-    setError("");
     setMessage("");
+    setMessageType("");
 
     try {
-      const [
-        loadedPlans,
-        loadedPaymentAccounts,
-        currentMembership,
-      ] = await Promise.all([
-        businessMembershipService.getBusinessMembershipPlans(
-          businessId
-        ),
-        businessPaymentAccountService.getCustomerPaymentAccounts(
-          businessId
-        ),
-        businessMembershipService.getMyMembershipForBusiness(
-          businessId
-        ),
-      ]);
+      if (!businessId) {
+        throw new Error("BUSINESS_REQUIRED");
+      }
 
-      const supportedPaymentAccounts =
-        loadedPaymentAccounts.filter(
-          (account) =>
-            account.provider === "mtn" ||
-            account.provider === "orange"
+      const [{ data: businessData, error: businessError }, availablePlans] =
+        await Promise.all([
+          supabase
+            .from("business")
+            .select("id, name")
+            .eq("id", businessId)
+            .maybeSingle(),
+          businessMembershipPlanService.getPlansForBusiness(businessId),
+        ]);
+
+      if (businessError) {
+        throw businessError;
+      }
+
+      if (!businessData) {
+        throw new Error("BUSINESS_REQUIRED");
+      }
+
+      const accounts =
+        await businessPaymentAccountService.getCustomerPaymentAccounts(
+          businessId
         );
 
-      setPlans(loadedPlans);
-      setPaymentAccounts(supportedPaymentAccounts);
+      let currentMembership: MembershipRecord | null = null;
+
+      try {
+        const current =
+          await businessMembershipService.getMyMembershipForBusiness(
+            businessId
+          );
+
+        if (current) {
+          currentMembership = {
+            id: String(current.id),
+            status: String(current.status),
+            expiresAt:
+              "expiresAt" in current
+                ? (current as any).expiresAt ?? null
+                : null,
+          };
+        }
+      } catch (membershipError) {
+        console.warn(
+          "Unable to load current business membership:",
+          membershipError
+        );
+      }
+
+      setBusiness({
+        id: String(businessData.id),
+        name: String(businessData.name),
+      });
+
+      setPlans(availablePlans);
+      setPaymentAccounts(
+        accounts.filter(
+          (account) =>
+            account.provider === "mtn" || account.provider === "orange"
+        )
+      );
       setMembership(currentMembership);
 
-      if (loadedPlans.length > 0) {
-        setSelectedPlanId(loadedPlans[0].id);
+      if (availablePlans.length > 0) {
+        setSelectedPlanId((current) =>
+          current && availablePlans.some((plan) => plan.id === current)
+            ? current
+            : availablePlans[0].id
+        );
+      } else {
+        setSelectedPlanId(null);
       }
 
-      if (supportedPaymentAccounts.length > 0) {
-        setSelectedPaymentAccountId(
-          supportedPaymentAccounts[0].id
+      if (accounts.length > 0) {
+        setSelectedPaymentAccountId((current) =>
+          current && accounts.some((account) => account.id === current)
+            ? current
+            : accounts[0].id
         );
-
-        setPaymentMethod(
-          supportedPaymentAccounts[0].provider === "orange"
-            ? "orange"
-            : "mtn"
-        );
+      } else {
+        setSelectedPaymentAccountId(null);
       }
-    } catch (err) {
-      console.error(
-        "Subscription page error:",
-        err
-      );
+    } catch (error) {
+      console.error("Business subscription load error:", error);
 
-      setError(
-        err instanceof Error
-          ? err.message
+      setMessage(
+        error instanceof Error && error.message === "BUSINESS_REQUIRED"
+          ? t.businessSubscriptionBusinessRequired
           : t.businessSubscriptionLoadError
       );
+      setMessageType("error");
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  const selectedPlan =
-    plans.find(
-      (plan) => plan.id === selectedPlanId
-    ) ?? null;
+  useEffect(() => {
+    void loadData();
+  }, [businessId]);
 
-  const isPaidPlan =
-    selectedPlan !== null &&
-    selectedPlan.amount > 0 &&
-    selectedPlan.billingType !== "free";
-
-  function getBillingLabel(
-    billingType: BusinessMembershipPlan["billingType"]
-  ) {
-    switch (billingType) {
-      case "monthly":
-        return t.businessSubscriptionMonthly;
-
-      case "yearly":
-        return t.businessSubscriptionYearly;
-
-      case "one_time":
-        return t.businessSubscriptionOneTime;
-
-      case "invite_only":
-        return t.businessSubscriptionInviteOnly;
-
-      case "free":
-      default:
-        return t.businessSubscriptionFree;
-    }
-  }
-
-  function getPaymentMethodLabel(
-    provider: BusinessPaymentAccount["provider"]
-  ) {
-    switch (provider) {
-      case "orange":
-        return t.businessSubscriptionOrangeMoney;
-
-      case "mtn":
-      default:
-        return t.businessSubscriptionMtnMobileMoney;
-    }
-  }
-
-  async function handleSubscribe() {
-    setError("");
+  const handleSelectPlan = (planId: string) => {
+    setSelectedPlanId(planId);
     setMessage("");
+    setMessageType("");
+
+    window.setTimeout(() => {
+      document
+        .getElementById("membership-payment")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  };
+
+  const handleContinue = async () => {
+    setMessage("");
+    setMessageType("");
 
     if (!businessId) {
-      setError(
-        t.businessSubscriptionBusinessRequired
-      );
+      setMessage(t.businessSubscriptionBusinessRequired);
+      setMessageType("error");
       return;
     }
 
     if (!selectedPlan) {
-      setError(
-        t.businessSubscriptionPlanRequired
-      );
+      setMessage(t.businessSubscriptionPlanRequired);
+      setMessageType("error");
       return;
     }
 
-    if (!selectedPlan.active) {
-      setError(
-        t.businessSubscriptionPlanUnavailable
-      );
+    if (!selectedPaymentAccount) {
+      setMessage(t.businessSubscriptionPaymentAccountRequired);
+      setMessageType("error");
+      return;
+    }
+
+    if (!phoneNumber.trim()) {
+      setMessage(t.businessSubscriptionPhoneRequired);
+      setMessageType("error");
       return;
     }
 
@@ -195,320 +250,296 @@ export default function Subscription() {
           selectedPlan.id
         );
 
-      const requestedMembership =
-        await businessMembershipService.getMembershipById(
-          membershipId
-        );
+      const payment =
+        await businessMembershipPaymentService.initiatePayment({
+          membershipId,
+          businessPaymentAccountId: selectedPaymentAccount.id,
+          paymentMethod,
+          customerPhoneNumber: phoneNumber.trim(),
+        });
 
-      if (!requestedMembership) {
-        throw new Error(
-          t.businessSubscriptionUnableToSubscribe
-        );
-      }
-
-      setMembership(requestedMembership);
-
-      if (
-        selectedPlan.amount <= 0 ||
-        selectedPlan.billingType === "free"
-      ) {
-        setMessage(
-          t.businessSubscriptionActivated
-        );
+      if (!payment.success) {
+        setMessage(t.businessSubscriptionPaymentFailed);
+        setMessageType("error");
         return;
       }
 
-      if (!selectedPaymentAccountId) {
-        setError(
-          t.businessSubscriptionPaymentAccountRequired
-        );
-        return;
-      }
+      setMessage(t.businessSubscriptionPaymentCreated);
+      setMessageType("success");
 
-      if (!phoneNumber.trim()) {
-        setError(
-          t.businessSubscriptionPhoneRequired
-        );
-        return;
-      }
+      await loadData();
+    } catch (error) {
+      console.error("Business subscription payment error:", error);
 
-      const result =
-        await businessMembershipPaymentService.initiatePayment(
-          {
-            membershipId:
-              requestedMembership.id,
-            businessPaymentAccountId:
-              selectedPaymentAccountId,
-            paymentMethod,
-            customerPhoneNumber:
-              phoneNumber.trim(),
-          }
-        );
-
-      if (!result.success) {
-        setError(
-          result.message ||
-            t.businessSubscriptionPaymentFailed
-        );
-        return;
-      }
-
-      setMessage(
-        result.message ||
-          t.businessSubscriptionPaymentCreated
-      );
-    } catch (err) {
-      console.error(
-        "Membership subscription error:",
-        err
-      );
-
-      setError(
-        err instanceof Error
-          ? err.message
-          : t.businessSubscriptionUnableToSubscribe
-      );
+      setMessage(t.businessSubscriptionUnableToSubscribe);
+      setMessageType("error");
     } finally {
       setProcessing(false);
     }
-  }
+  };
 
   if (loading) {
     return (
-      <PageShell>
-        <section style={styles.loadingCard}>
-          <h1>{t.businessSubscriptionLoadingTitle}</h1>
-          <p>
+      <main className="ec-subscription-page">
+        <div className="mx-auto max-w-5xl text-center">
+          <div className="mx-auto mb-5 h-10 w-10 animate-spin rounded-full border-4 border-emerald-400/30 border-t-emerald-400" />
+          <h1 className="text-2xl font-bold">
+            {t.businessSubscriptionLoadingTitle}
+          </h1>
+          <p className="mt-2 text-gray-400">
             {t.businessSubscriptionLoadingDescription}
           </p>
-        </section>
-      </PageShell>
-    );
-  }
-
-  if (!businessId) {
-    return (
-      <PageShell>
-        <section style={styles.errorCard}>
-          <h1>
-            {t.businessSubscriptionBusinessRequired}
-          </h1>
-        </section>
-      </PageShell>
+        </div>
+      </main>
     );
   }
 
   return (
-    <PageShell>
-      <section style={styles.header}>
-        <h1>{t.businessSubscriptionTitle}</h1>
+    <main className="ec-subscription-page">
+      <div className="ec-subscription-shell">
+        <header className="mb-10 text-center">
+          <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
+            {t.businessSubscriptionTitle}
+          </h1>
 
-        {membership && (
-          <div style={styles.currentMembership}>
-            <strong>
-              {t.businessSubscriptionCurrentMembership}
-            </strong>
-
-            <p>
-              {t.businessSubscriptionStatus}:{" "}
-              {membership.status}
+          {business && (
+            <p className="mt-3 text-sm font-medium text-emerald-400">
+              {business.name}
             </p>
+          )}
 
-            {membership.expiresAt && (
-              <p>
-                {t.businessSubscriptionExpires}:{" "}
-                {new Date(
-                  membership.expiresAt
-                ).toLocaleDateString(
-                  language === "fr"
-                    ? "fr-FR"
-                    : "en-US"
-                )}
-              </p>
-            )}
+          <p className="mt-3 text-xl font-semibold text-gray-200">
+            {t.businessSubscriptionChoosePlan}
+          </p>
+        </header>
+
+        {message && (
+          <div
+            className={`mb-6 rounded-xl border px-4 py-3 text-sm ${
+              messageType === "success"
+                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                : "border-red-500/40 bg-red-500/10 text-red-300"
+            }`}
+          >
+            {message}
           </div>
         )}
-      </section>
 
-      {error && (
-        <div style={styles.errorMessage}>
-          {error}
-        </div>
-      )}
+        {membership && (
+          <section className="mb-6 rounded-2xl border border-emerald-500/30 bg-[#17191f] p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm text-gray-400">
+                  {t.businessSubscriptionCurrentMembership}
+                </p>
+                <p className="mt-1 text-lg font-bold text-white">
+                  {membership.status}
+                </p>
+              </div>
 
-      {message && (
-        <div style={styles.successMessage}>
-          {message}
-        </div>
-      )}
-
-      {plans.length === 0 ? (
-        <section style={styles.emptyCard}>
-          <h2>
-            {t.businessSubscriptionNoPlansTitle}
-          </h2>
-
-          <p>
-            {t.businessSubscriptionNoPlansDescription}
-          </p>
-        </section>
-      ) : (
-        <>
-          <section>
-            <h2>
-              {t.businessSubscriptionChoosePlan}
-            </h2>
-
-            <div style={styles.planGrid}>
-              {plans.map((plan) => {
-                const selected =
-                  plan.id === selectedPlanId;
-
-                return (
-                  <button
-                    type="button"
-                    key={plan.id}
-                    onClick={() =>
-                      setSelectedPlanId(plan.id)
-                    }
-                    style={{
-                      ...styles.planCard,
-                      ...(selected
-                        ? styles.selectedPlanCard
-                        : {}),
-                    }}
-                  >
-                    <h3>{plan.name}</h3>
-
-                    {plan.description && (
-                      <p>{plan.description}</p>
-                    )}
-
-                    <strong style={styles.price}>
-                      {plan.amount.toLocaleString()}{" "}
-                      {plan.currency}
-                    </strong>
-
-                    <span>
-                      {getBillingLabel(
-                        plan.billingType
-                      )}
-                    </span>
-
-                    {plan.approvalRequired && (
-                      <small>
-                        {t.businessSubscriptionApprovalRequired}
-                      </small>
-                    )}
-
-                    {plan.benefits.length > 0 && (
-                      <ul style={styles.benefits}>
-                        {plan.benefits.map(
-                          (benefit, index) => (
-                            <li key={index}>
-                              {String(benefit)}
-                            </li>
-                          )
-                        )}
-                      </ul>
-                    )}
-                  </button>
-                );
-              })}
+              {membership.expiresAt && (
+                <p className="text-sm text-gray-400">
+                  {t.businessSubscriptionExpires}:{" "}
+                  {new Date(membership.expiresAt).toLocaleDateString()}
+                </p>
+              )}
             </div>
           </section>
+        )}
 
-          {selectedPlan && isPaidPlan && (
-            <section style={styles.paymentCard}>
-              <h2>
-                {t.businessSubscriptionPaymentTitle}
-              </h2>
+        {plans.length === 0 ? (
+          <section className="rounded-2xl border border-gray-700 bg-[#17191f] p-10 text-center">
+            <h2 className="text-xl font-bold">
+              {t.businessSubscriptionNoPlansTitle}
+            </h2>
+            <p className="mt-2 text-gray-400">
+              {t.businessSubscriptionNoPlansDescription}
+            </p>
+          </section>
+        ) : (
+          <>
+            <section className="space-y-5">
+              {plans.map((plan, index) => {
+                const selected = plan.id === selectedPlanId;
+
+                return (
+                  <article
+                    key={plan.id}
+                    className={`rounded-2xl border bg-[#17191f] p-6 shadow-2xl transition sm:p-7 ${
+                      selected
+                        ? "border-emerald-400/70 shadow-emerald-950/30"
+                        : "border-gray-700"
+                    }`}
+                  >
+                    <div className="grid gap-7 lg:grid-cols-[1.1fr_0.9fr]">
+                      <div>
+                        {index === 0 && (
+                          <span className="inline-flex rounded-md bg-emerald-500/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-300">
+                            {t.businessSubscriptionPopular}
+                          </span>
+                        )}
+
+                        <h2 className="mt-4 text-3xl font-extrabold text-white">
+                          {plan.name}
+                        </h2>
+
+                        {plan.description && (
+                          <p className="mt-3 text-sm leading-6 text-gray-300">
+                            {plan.description}
+                          </p>
+                        )}
+
+                        {plan.benefits.length > 0 && (
+                          <ul className="mt-6 space-y-3">
+                            {plan.benefits.map((benefit, benefitIndex) => (
+                              <li
+                                key={`${plan.id}-${benefitIndex}`}
+                                className="flex items-start gap-3 text-sm text-gray-200"
+                              >
+                                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-400 text-xs font-black text-[#07130f]">
+                                  
+                                </span>
+                                <span>{benefit}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+
+                      <div className="border-t border-gray-700 pt-6 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0">
+                        <p className="text-xs font-bold uppercase tracking-widest text-emerald-400">
+                          {billingLabel(plan)}
+                        </p>
+
+                        <div className="mt-3 flex items-end gap-2">
+                          <span className="text-4xl font-extrabold text-white">
+                            {plan.amount.toLocaleString()}
+                          </span>
+                          <span className="pb-1 text-sm text-gray-300">
+                            {plan.currency}
+                            {billingSuffix(plan) && (
+                              <> {billingSuffix(plan)}</>
+                            )}
+                          </span>
+                        </div>
+
+                        {plan.approvalRequired && (
+                          <div className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-500/15 px-3 py-2 text-sm font-semibold text-blue-200">
+                            <span></span>
+                            {t.businessSubscriptionApprovalRequired}
+                          </div>
+                        )}
+
+                        {plan.approvalRequired && (
+                          <p className="mt-3 text-sm leading-6 text-gray-400">
+                            {t.businessSubscriptionApprovalDescription}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSelectPlan(plan.id)}
+                      className={`mt-7 w-full rounded-xl px-5 py-3.5 text-sm font-bold transition ${
+                        selected
+                          ? "bg-emerald-500 text-[#07130f] hover:bg-emerald-400"
+                          : "border border-emerald-500/50 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+                      }`}
+                    >
+                      {selected
+                        ? t.businessSubscriptionSelectedPlan
+                        : t.businessSubscriptionSelectPlan}
+                    </button>
+                  </article>
+                );
+              })}
+            </section>
+
+            <section
+              id="membership-payment"
+              className="mt-7 rounded-2xl border border-gray-700 bg-[#17191f] p-6 sm:p-7"
+            >
+              <div className="text-center">
+                <h2 className="text-2xl font-extrabold">
+                  {t.businessSubscriptionPaymentTitle}
+                </h2>
+                <p className="mt-2 text-sm text-gray-400">
+                  {t.businessSubscriptionSecurePayment}
+                </p>
+              </div>
 
               {paymentAccounts.length === 0 ? (
-                <p>
-                  {
-                    t.businessSubscriptionNoPaymentAccounts
-                  }
-                </p>
+                <div className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-center text-sm text-amber-200">
+                  {t.businessSubscriptionNoPaymentAccounts}
+                </div>
               ) : (
                 <>
-                  <label style={styles.label}>
-                    {
-                      t.businessSubscriptionPaymentMethod
-                    }
-                  </label>
+                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                    {paymentAccounts.map((account) => {
+                      const provider = account.provider as PaymentMethod;
+                      const selected =
+                        account.id === selectedPaymentAccountId;
 
-                  <div style={styles.paymentOptions}>
-                    {paymentAccounts.map(
-                      (account) => (
+                      return (
                         <button
-                          type="button"
                           key={account.id}
+                          type="button"
                           onClick={() => {
-                            setSelectedPaymentAccountId(
-                              account.id
-                            );
-
-                            setPaymentMethod(
-                              account.provider ===
-                                "orange"
-                                ? "orange"
-                                : "mtn"
-                            );
+                            setSelectedPaymentAccountId(account.id);
+                            setPaymentMethod(provider);
                           }}
-                          style={{
-                            ...styles.paymentOption,
-                            ...(selectedPaymentAccountId ===
-                            account.id
-                              ? styles.selectedPaymentOption
-                              : {}),
-                          }}
+                          className={`rounded-xl border p-5 text-left transition ${
+                            selected
+                              ? "border-emerald-400 bg-emerald-500/10"
+                              : "border-gray-600 bg-[#111217] hover:border-gray-400"
+                          }`}
                         >
-                          {getPaymentMethodLabel(
-                            account.provider
-                          )}
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-xs font-black text-gray-900">
+                              {provider === "mtn" ? "MTN" : "OM"}
+                            </span>
 
-                          {account.displayName && (
-                            <small>
-                              {account.displayName}
-                            </small>
-                          )}
+                            <div>
+                              <p className="font-bold text-white">
+                                {provider === "mtn"
+                                  ? t.businessSubscriptionMtnMobileMoney
+                                  : t.businessSubscriptionOrangeMoney}
+                              </p>
+
+                              {account.displayName && (
+                                <p className="mt-1 text-xs text-gray-400">
+                                  {account.displayName}
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </button>
-                      )
-                    )}
+                      );
+                    })}
                   </div>
 
-                  <label
-                    htmlFor="membership-phone"
-                    style={styles.label}
-                  >
-                    {
-                      t.businessSubscriptionPhoneNumber
-                    }
-                  </label>
+                  <div className="mt-6">
+                    <label className="mb-2 block text-sm font-semibold text-gray-200">
+                      {t.businessSubscriptionPhoneNumber}
+                    </label>
 
-                  <input
-                    id="membership-phone"
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(event) =>
-                      setPhoneNumber(
-                        event.target.value
-                      )
-                    }
-                    placeholder={
-                      t.businessSubscriptionPhonePlaceholder
-                    }
-                    style={styles.input}
-                  />
+                    <input
+                      type="tel"
+                      value={phoneNumber}
+                      onChange={(event) =>
+                        setPhoneNumber(event.target.value)
+                      }
+                      placeholder={t.businessSubscriptionPhonePlaceholder}
+                      className="w-full rounded-xl border border-gray-600 bg-[#111217] px-4 py-3 text-white outline-none placeholder:text-gray-600 focus:border-emerald-400"
+                    />
+                  </div>
 
                   <button
                     type="button"
                     disabled={processing}
-                    onClick={() =>
-                      void handleSubscribe()
-                    }
-                    style={styles.primaryButton}
+                    onClick={() => void handleContinue()}
+                    className="mt-6 w-full rounded-xl bg-emerald-500 px-5 py-4 text-sm font-extrabold text-[#07130f] transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {processing
                       ? t.businessSubscriptionProcessing
@@ -517,168 +548,41 @@ export default function Subscription() {
                 </>
               )}
             </section>
-          )}
 
-          {selectedPlan && !isPaidPlan && (
-            <section style={styles.paymentCard}>
-              <button
-                type="button"
-                disabled={processing}
-                onClick={() =>
-                  void handleSubscribe()
-                }
-                style={styles.primaryButton}
-              >
-                {processing
-                  ? t.businessSubscriptionProcessing
-                  : t.businessSubscriptionContinue}
-              </button>
+            <section className="mt-5 grid gap-3 rounded-xl border border-gray-700 bg-[#15171c] p-4 sm:grid-cols-3">
+              <div className="rounded-lg p-3 text-center">
+                <div className="ec-feature-icon">+</div><p className="mt-1 text-sm font-bold">
+                  {t.businessSubscriptionSecurePaymentTitle}
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {t.businessSubscriptionSecurePaymentDescription}
+                </p>
+              </div>
+
+              <div className="rounded-lg p-3 text-center">
+                <div className="ec-feature-icon">+</div><p className="mt-1 text-sm font-bold">
+                  {t.businessSubscriptionQuickApprovalTitle}
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {t.businessSubscriptionQuickApprovalDescription}
+                </p>
+              </div>
+
+              <div className="rounded-lg p-3 text-center">
+                <div className="ec-feature-icon">+</div><p className="mt-1 text-sm font-bold">
+                  {t.businessSubscriptionSupportTitle}
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {t.businessSubscriptionSupportDescription}
+                </p>
+              </div>
             </section>
-          )}
-        </>
-      )}
-    </PageShell>
+
+            <p className="ec-activation-note">{t.businessSubscriptionActivationNote}
+            </p>
+          </>
+        )}
+      </div>
+    </main>
   );
 }
-
-function PageShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <div style={styles.page}>
-      {children}
-    </div>
-  );
-}
-
-const styles: Record<string, CSSProperties> = {
-  page: {
-    maxWidth: 1100,
-    margin: "0 auto",
-    padding: "40px 20px",
-  },
-
-  header: {
-    marginBottom: 30,
-  },
-
-  loadingCard: {
-    padding: 30,
-    textAlign: "center",
-  },
-
-  errorCard: {
-    padding: 30,
-    textAlign: "center",
-  },
-
-  currentMembership: {
-    marginTop: 20,
-    padding: 20,
-    borderRadius: 12,
-    border: "1px solid #ddd",
-  },
-
-  errorMessage: {
-    padding: 15,
-    marginBottom: 20,
-    borderRadius: 8,
-    background: "#fee2e2",
-  },
-
-  successMessage: {
-    padding: 15,
-    marginBottom: 20,
-    borderRadius: 8,
-    background: "#dcfce7",
-  },
-
-  emptyCard: {
-    padding: 30,
-    borderRadius: 12,
-    border: "1px solid #ddd",
-  },
-
-  planGrid: {
-    display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fit, minmax(280px, 1fr))",
-    gap: 20,
-    marginTop: 20,
-  },
-
-  planCard: {
-    textAlign: "left",
-    padding: 24,
-    borderRadius: 14,
-    border: "1px solid #ddd",
-    background: "#fff",
-    cursor: "pointer",
-  },
-
-  selectedPlanCard: {
-    border: "2px solid #1d4ed8",
-  },
-
-  price: {
-    display: "block",
-    fontSize: 24,
-    margin: "15px 0 8px",
-  },
-
-  benefits: {
-    marginTop: 15,
-    paddingLeft: 20,
-  },
-
-  paymentCard: {
-    marginTop: 35,
-    padding: 25,
-    borderRadius: 14,
-    border: "1px solid #ddd",
-  },
-
-  label: {
-    display: "block",
-    fontWeight: 600,
-    marginTop: 20,
-    marginBottom: 8,
-  },
-
-  paymentOptions: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-
-  paymentOption: {
-    padding: 14,
-    borderRadius: 10,
-    border: "1px solid #ddd",
-    background: "#fff",
-    cursor: "pointer",
-  },
-
-  selectedPaymentOption: {
-    border: "2px solid #1d4ed8",
-  },
-
-  input: {
-    width: "100%",
-    boxSizing: "border-box",
-    padding: 13,
-    borderRadius: 8,
-    border: "1px solid #ccc",
-  },
-
-  primaryButton: {
-    marginTop: 20,
-    padding: "13px 20px",
-    borderRadius: 8,
-    border: "none",
-    cursor: "pointer",
-    fontWeight: 600,
-  },
-};
