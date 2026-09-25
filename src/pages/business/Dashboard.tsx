@@ -28,6 +28,9 @@ function Dashboard() {
   const [serviceCount, setServiceCount] =
     useState(0);
 
+  const [bookingCount, setBookingCount] =
+    useState(0);
+
   useEffect(() => {
     loadBusiness();
   }, [businessId]);
@@ -62,6 +65,26 @@ function Dashboard() {
         }
       } else {
         setServiceCount(0);
+      }
+
+      if (ownedBusiness?.id) {
+        const { count, error: bookingCountError } =
+          await supabase
+            .from("bookings")
+            .select("*", { count: "exact", head: true })
+            .eq("business_id", ownedBusiness.id);
+
+        if (bookingCountError) {
+          console.error(
+            "Unable to load booking count:",
+            bookingCountError
+          );
+          setBookingCount(0);
+        } else {
+          setBookingCount(count ?? 0);
+        }
+      } else {
+        setBookingCount(0);
       }
     } catch (err) {
       console.error("Business dashboard error:", err);
@@ -294,7 +317,7 @@ function Dashboard() {
             >
               <DashboardCard
                 title={t.businessDashboardBookings}
-                value="0"
+                value={String(bookingCount)}
                 description={
                   t.businessDashboardUpcomingBookings
                 }
@@ -750,5 +773,6 @@ function ManagementCard({
 }
 
 export default Dashboard;
+
 
 
