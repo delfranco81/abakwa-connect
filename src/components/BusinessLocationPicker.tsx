@@ -1,5 +1,6 @@
 ﻿import {
   useEffect,
+  useState,
 } from "react";
 
 import {
@@ -14,6 +15,11 @@ import {
 import L from "leaflet";
 
 import "leaflet/dist/leaflet.css";
+
+import {
+  searchPlace,
+  type PlaceSearchResult,
+} from "../lib/locationService";
 
 import iconUrl from "leaflet/dist/images/marker-icon.png";
 import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
@@ -44,7 +50,7 @@ const STREET_MAP_URL =
  * This remains an optional layer.
  */
 const SATELLITE_MAP_URL =
-  "https://wi.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 
 /*
  * ============================================================
@@ -252,6 +258,106 @@ function BusinessLocationPicker({
     coordinates: Coordinates
   ) => void;
 }) {
+  const [searchQuery, setSearchQuery] =
+    useState("");
+
+  const [searchResults, setSearchResults] =
+    useState<PlaceSearchResult[]>([]);
+
+  const [searching, setSearching] =
+    useState(false);
+
+  const [searchError, setSearchError] =
+    useState("");
+
+  async function handleLocationSearch() {
+    const query =
+      searchQuery.trim();
+
+    if (!query) {
+      setSearchError(
+        "Enter a town, area, street or landmark."
+      );
+
+      return;
+    }
+
+    try {
+      setSearching(true);
+      setSearchError("");
+
+      const results =
+        await searchPlace(query);
+
+      console.log(
+        "ECOS SEARCH RESULTS RECEIVED:",
+        results
+      );
+
+      console.log(
+        "ECOS SEARCH RESULT COUNT:",
+        results.length
+      );
+
+      setSearchResults(results);
+
+      if (results.length === 0) {
+        setSearchError(
+          "No locations found. Try a more specific place name."
+        );
+      }
+    } catch (error) {
+      console.error(
+        "ECOS location search failed:",
+        error
+      );
+
+      setSearchResults([]);
+
+      setSearchError(
+        "Location search is temporarily unavailable. You can still select the location directly on the map."
+      );
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  function selectSearchResult(
+    result: PlaceSearchResult
+  ) {
+    const latitude =
+      Number(result.lat);
+
+    const longitude =
+      Number(result.lon);
+
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude)
+    ) {
+      return;
+    }
+
+    const coordinates: Coordinates = [
+      latitude,
+      longitude,
+    ];
+
+    console.log(
+      "ECOS SEARCH RESULT SELECTED:",
+      result.display_name,
+      coordinates
+    );
+
+    setSearchQuery(
+      result.display_name
+    );
+
+    setSearchResults([]);
+
+    onChange(coordinates);
+  }
+
   /*
    * ONLY use the supplied browser/device location.
    *
@@ -283,6 +389,130 @@ function BusinessLocationPicker({
         width: "100%",
       }}
     >
+
+      {/* ======================================================
+          LOCATION SEARCH
+          ====================================================== */}
+
+      <div
+        style={{
+          marginBottom: "12px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            flexWrap: "wrap",
+          }}
+        >
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(event) => {
+              setSearchQuery(event.target.value);
+              setSearchError("");
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void handleLocationSearch();
+              }
+            }}
+            placeholder="Search town, area, street or landmark"
+            aria-label="Search business location"
+            style={{
+              flex: "1 1 260px",
+              minWidth: 0,
+              padding: "12px 14px",
+              border: "1px solid #cbd5e1",
+              borderRadius: "8px",
+              fontSize: "16px",
+            }}
+          />
+
+          <button
+            type="button"
+            onClick={() => {
+              void handleLocationSearch();
+            }}
+            disabled={searching}
+            style={{
+              padding: "12px 18px",
+              border: "none",
+              borderRadius: "8px",
+              cursor: searching
+                ? "not-allowed"
+                : "pointer",
+              fontWeight: 600,
+            }}
+          >
+            {searching
+              ? "Searching..."
+              : "Search location"}
+          </button>
+        </div>
+
+        {searchError && (
+          <div
+            role="alert"
+            style={{
+              marginTop: "8px",
+              padding: "10px 12px",
+              borderRadius: "8px",
+              background: "#fff3cd",
+              color: "#664d03",
+              fontSize: "14px",
+            }}
+          >
+            {searchError}
+          </div>
+        )}
+
+        {searchResults.length > 0 && (
+          <div
+            style={{
+              marginTop: "8px",
+              border: "1px solid #d7dde3",
+              borderRadius: "8px",
+              overflow: "hidden",
+              background: "#ffffff",
+            }}
+          >
+            {searchResults.map(
+              (result, index) => (
+                <button
+                  key={`${result.lat}-${result.lon}-${index}`}
+                  type="button"
+                  onClick={() => {
+                    selectSearchResult(result);
+                  }}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    padding: "12px 14px",
+                    border: "none",
+                    borderBottom:
+                      index <
+                      searchResults.length - 1
+                        ? "1px solid #e5e7eb"
+                        : "none",
+                    background: "#ffffff",
+                    color: "#111827",
+                    textAlign: "left",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {result.display_name}
+                </button>
+              )
+            )}
+          </div>
+        )}
+      </div>
+
 
       <MapContainer
         center={
@@ -547,3 +777,8 @@ function BusinessLocationPicker({
 }
 
 export default BusinessLocationPicker;
+
+
+
+
+
