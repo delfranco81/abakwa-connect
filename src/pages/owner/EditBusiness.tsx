@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+import { getOwnedBusinessById } from "../../services/business/BusinessOwnerService";
 
-type Place = {
+type BusinessForm = {
   id: string;
+  place_id: string | null;
   name: string;
   category: string;
   description: string;
@@ -10,86 +13,155 @@ type Place = {
   whatsapp: string;
   email: string;
   website: string;
-  city: string;
   area: string;
   landmark: string;
+  address: string;
+  opening_hours: string;
   latitude: number | null;
   longitude: number | null;
-  logo: string | null;
-  cover_image: string | null;
-  verified: boolean;
-  featured: boolean;
 };
 
 export default function EditBusiness() {
-  const [place, setPlace] = useState<Place | null>(null);
+  const [searchParams] = useSearchParams();
+  const businessId = searchParams.get("businessId");
+
+  const [business, setBusiness] = useState<BusinessForm | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
-    loadBusiness();
-  }, []);
+    async function loadBusiness() {
+      setLoading(true);
+      setErrorMessage("");
 
-  async function loadBusiness() {
-    setLoading(true);
+      if (!businessId) {
+        setErrorMessage("No business was selected.");
+        setLoading(false);
+        return;
+      }
 
-    // Temporary:
-    // Loads the first business.
-    // Later we'll replace this with owner authentication.
-    const { data, error } = await supabase
-      .from("places")
-      .select("*")
-      .limit(1)
-      .single();
+      try {
+        const ownedBusiness = await getOwnedBusinessById(businessId);
 
-    if (error) {
-      console.error(error);
-    } else {
-      setPlace(data);
+        if (!ownedBusiness) {
+          setErrorMessage(
+            "Business not found or you do not have permission to manage it."
+          );
+          setLoading(false);
+          return;
+        }
+
+        setBusiness({
+          id: ownedBusiness.id,
+          place_id: ownedBusiness.place_id,
+          name: ownedBusiness.name ?? "",
+          category: ownedBusiness.category ?? "",
+          description: ownedBusiness.description ?? "",
+          phone: ownedBusiness.phone ?? "",
+          whatsapp: ownedBusiness.whatsapp ?? "",
+          email: ownedBusiness.email ?? "",
+          website: ownedBusiness.website ?? "",
+          area: ownedBusiness.area ?? "",
+          landmark: ownedBusiness.landmark ?? "",
+          address: ownedBusiness.address ?? "",
+          opening_hours: ownedBusiness.opening_hours ?? "",
+          latitude: ownedBusiness.latitude ?? null,
+          longitude: ownedBusiness.longitude ?? null,
+        });
+      } catch (error) {
+        console.error("Failed to load owned business:", error);
+        setErrorMessage("Unable to load this business.");
+      } finally {
+        setLoading(false);
+      }
     }
 
-    setLoading(false);
-  }
+    void loadBusiness();
+  }, [businessId]);
 
   async function saveBusiness() {
-    if (!place) return;
+    if (!business) return;
 
     setSaving(true);
+    setErrorMessage("");
 
-    const { error } = await supabase
-      .from("places")
-      .update({
-        name: place.name,
-        category: place.category,
-        description: place.description,
-        phone: place.phone,
-        whatsapp: place.whatsapp,
-        email: place.email,
-        website: place.website,
-        city: place.city,
-        area: place.area,
-        landmark: place.landmark,
-        latitude: place.latitude,
-        longitude: place.longitude,
-      })
-      .eq("id", place.id);
+    try {
+      const { error: businessError } = await supabase
+        .from("business")
+        .update({
+          name: business.name,
+          category: business.category,
+          description: business.description,
+          phone: business.phone,
+          whatsapp: business.whatsapp,
+          email: business.email,
+          website: business.website,
+          area: business.area,
+          landmark: business.landmark,
+          address: business.address,
+          opening_hours: business.opening_hours,
+          latitude: business.latitude,
+          longitude: business.longitude,
+        })
+        .eq("id", business.id);
 
-    setSaving(false);
+      if (businessError) {
+        throw businessError;
+      }
 
-    if (error) {
-      alert(error.message);
-      return;
+      if (business.place_id) {
+        const { error: placeError } = await supabase
+          .from("places")
+          .update({
+            name: business.name,
+            category: business.category,
+            description: business.description,
+            phone: business.phone,
+            email: business.email,
+            website: business.website,
+            address: business.address,
+            opening_hours: business.opening_hours,
+            subdivision: business.area,
+            latitude: business.latitude,
+            longitude: business.longitude,
+            lat: business.latitude,
+            lng: business.longitude,
+          })
+          .eq("id", business.place_id);
+
+        if (placeError) {
+          throw placeError;
+        }
+      }
+
+      alert("Business updated successfully!");
+    } catch (error) {
+      console.error("Failed to update business:", error);
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to update business.";
+
+      setErrorMessage(message);
+      alert(message);
+    } finally {
+      setSaving(false);
     }
-
-    alert("Business updated successfully!");
   }
 
   if (loading) {
     return <h2>Loading business...</h2>;
   }
 
-  if (!place) {
-    return <h2>No business found.</h2>;
+  if (!business) {
+    return (
+      <div style={{ maxWidth: 900, margin: "40px auto", padding: 30 }}>
+        <h2>Business unavailable</h2>
+        <p>{errorMessage || "No business found."}</p>
+      </div>
+    );
   }
 
   return (
@@ -105,119 +177,127 @@ export default function EditBusiness() {
     >
       <h1>Edit Business</h1>
 
-      <div
-        style={{
-          display: "grid",
-          gap: 16,
-        }}
-      >
+      {errorMessage && (
+        <p style={{ color: "#b91c1c" }}>{errorMessage}</p>
+      )}
+
+      <div style={{ display: "grid", gap: 16 }}>
         <input
           placeholder="Business Name"
-          value={place.name}
+          value={business.name}
           onChange={(e) =>
-            setPlace({ ...place, name: e.target.value })
+            setBusiness({ ...business, name: e.target.value })
           }
         />
 
         <input
           placeholder="Category"
-          value={place.category}
+          value={business.category}
           onChange={(e) =>
-            setPlace({ ...place, category: e.target.value })
+            setBusiness({ ...business, category: e.target.value })
           }
         />
 
         <textarea
           rows={5}
           placeholder="Description"
-          value={place.description}
+          value={business.description}
           onChange={(e) =>
-            setPlace({ ...place, description: e.target.value })
+            setBusiness({ ...business, description: e.target.value })
           }
         />
 
         <input
           placeholder="Phone"
-          value={place.phone}
+          value={business.phone}
           onChange={(e) =>
-            setPlace({ ...place, phone: e.target.value })
+            setBusiness({ ...business, phone: e.target.value })
           }
         />
 
         <input
           placeholder="WhatsApp"
-          value={place.whatsapp}
+          value={business.whatsapp}
           onChange={(e) =>
-            setPlace({ ...place, whatsapp: e.target.value })
+            setBusiness({ ...business, whatsapp: e.target.value })
           }
         />
 
         <input
           placeholder="Email"
-          value={place.email}
+          value={business.email}
           onChange={(e) =>
-            setPlace({ ...place, email: e.target.value })
+            setBusiness({ ...business, email: e.target.value })
           }
         />
 
         <input
           placeholder="Website"
-          value={place.website}
+          value={business.website}
           onChange={(e) =>
-            setPlace({ ...place, website: e.target.value })
-          }
-        />
-
-        <input
-          placeholder="City"
-          value={place.city}
-          onChange={(e) =>
-            setPlace({ ...place, city: e.target.value })
+            setBusiness({ ...business, website: e.target.value })
           }
         />
 
         <input
           placeholder="Area"
-          value={place.area}
+          value={business.area}
           onChange={(e) =>
-            setPlace({ ...place, area: e.target.value })
+            setBusiness({ ...business, area: e.target.value })
           }
         />
 
         <input
           placeholder="Landmark"
-          value={place.landmark}
+          value={business.landmark}
           onChange={(e) =>
-            setPlace({ ...place, landmark: e.target.value })
+            setBusiness({ ...business, landmark: e.target.value })
           }
         />
 
         <input
-          type="number"
-          placeholder="Latitude"
-          value={place.latitude ?? ""}
+          placeholder="Address"
+          value={business.address}
           onChange={(e) =>
-            setPlace({
-              ...place,
-              latitude:
-                e.target.value === ""
-                  ? null
-                  : Number(e.target.value),
+            setBusiness({ ...business, address: e.target.value })
+          }
+        />
+
+        <input
+          placeholder="Opening Hours"
+          value={business.opening_hours}
+          onChange={(e) =>
+            setBusiness({
+              ...business,
+              opening_hours: e.target.value,
             })
           }
         />
 
         <input
           type="number"
-          placeholder="Longitude"
-          value={place.longitude ?? ""}
+          step="any"
+          placeholder="Latitude"
+          value={business.latitude ?? ""}
           onChange={(e) =>
-            setPlace({
-              ...place,
+            setBusiness({
+              ...business,
+              latitude:
+                e.target.value === "" ? null : Number(e.target.value),
+            })
+          }
+        />
+
+        <input
+          type="number"
+          step="any"
+          placeholder="Longitude"
+          value={business.longitude ?? ""}
+          onChange={(e) =>
+            setBusiness({
+              ...business,
               longitude:
-                e.target.value === ""
-                  ? null
-                  : Number(e.target.value),
+                e.target.value === "" ? null : Number(e.target.value),
             })
           }
         />
@@ -231,7 +311,7 @@ export default function EditBusiness() {
             color: "#fff",
             border: "none",
             borderRadius: 8,
-            cursor: "pointer",
+            cursor: saving ? "not-allowed" : "pointer",
             fontSize: 16,
             fontWeight: 600,
           }}
