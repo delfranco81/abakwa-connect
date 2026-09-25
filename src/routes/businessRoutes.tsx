@@ -10,6 +10,7 @@ import CleaningBooking from "../pages/CleaningBooking";
 import Overview from "../pages/owner/Overview";
 import AddService from "../pages/owner/AddService";
 import Bookings from "../pages/owner/Bookings";
+import Customers from "../pages/owner/Customers";
 import Analytics from "../pages/owner/Analytics";
 import BusinessHours from "../pages/owner/BusinessHours";
 import Departments from "../pages/owner/Departments";
@@ -99,6 +100,15 @@ export function businessRoutes() {
         element={
           <ProtectedRoute>
             <Bookings />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/business-dashboard/customers"
+        element={
+          <ProtectedRoute>
+            <Customers />
           </ProtectedRoute>
         }
       />
@@ -203,5 +213,6 @@ export function businessRoutes() {
     </>
   );
 }
+
 
 
