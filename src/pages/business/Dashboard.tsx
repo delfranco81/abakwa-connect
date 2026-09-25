@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useLanguage } from "@/context/LanguageContext";
+import { supabase } from "@/core/database/supabase";
 
 import {
   getOwnedBusiness,
@@ -24,6 +25,9 @@ function Dashboard() {
   const [error, setError] =
     useState("");
 
+  const [serviceCount, setServiceCount] =
+    useState(0);
+
   useEffect(() => {
     loadBusiness();
   }, [businessId]);
@@ -38,6 +42,27 @@ function Dashboard() {
         : await getOwnedBusiness();
 
       setBusiness(ownedBusiness);
+
+      if (ownedBusiness?.place_id) {
+        const { count, error: serviceCountError } =
+          await supabase
+            .from("business_services")
+            .select("*", { count: "exact", head: true })
+            .eq("business_id", ownedBusiness.place_id)
+            .eq("active", true);
+
+        if (serviceCountError) {
+          console.error(
+            "Unable to load active service count:",
+            serviceCountError
+          );
+          setServiceCount(0);
+        } else {
+          setServiceCount(count ?? 0);
+        }
+      } else {
+        setServiceCount(0);
+      }
     } catch (err) {
       console.error("Business dashboard error:", err);
 
@@ -285,7 +310,7 @@ function Dashboard() {
 
               <DashboardCard
                 title={t.businessDashboardServices}
-                value="0"
+                value={String(serviceCount)}
                 description={
                   t.businessDashboardActiveServices
                 }
@@ -725,3 +750,5 @@ function ManagementCard({
 }
 
 export default Dashboard;
+
+

@@ -2,6 +2,7 @@
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useLanguage } from "../../context/LanguageContext";
+import { getOwnedBusinessById } from "../../services/business/BusinessOwnerService";
 
 type CleaningCategory =
   | "car-wash"
@@ -52,6 +53,7 @@ export default function AddService() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [serviceBusinessId, setServiceBusinessId] = useState("");
 
   const [serviceName, setServiceName] = useState("");
   const [description, setDescription] = useState("");
@@ -62,13 +64,44 @@ export default function AddService() {
     useState<CleaningCategory | "">("");
 
   useEffect(() => {
-    if (!businessId) {
-      setLoading(false);
+    async function resolveBusiness() {
+      if (!businessId) {
+        setServiceBusinessId("");
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const ownedBusiness = await getOwnedBusinessById(businessId);
+
+        if (!ownedBusiness?.place_id) {
+          setServiceBusinessId("");
+          setServices([]);
+          setLoading(false);
+          return;
+        }
+
+        setServiceBusinessId(ownedBusiness.place_id);
+      } catch (error) {
+        console.error("Unable to resolve business:", error);
+        setServiceBusinessId("");
+        setServices([]);
+        setLoading(false);
+      }
+    }
+
+    resolveBusiness();
+  }, [businessId]);
+
+  useEffect(() => {
+    if (!serviceBusinessId) {
       return;
     }
 
     loadServices();
-  }, [businessId]);
+  }, [serviceBusinessId]);
 
   async function loadServices() {
     setLoading(true);
@@ -78,7 +111,7 @@ export default function AddService() {
       .select(
         "id,business_id,service_name,description,price,currency,duration_minutes,is_featured,display_order,active,cleaning_category"
       )
-      .eq("business_id", businessId)
+      .eq("business_id", serviceBusinessId)
       .order("display_order", { ascending: true });
 
     if (error) {
@@ -143,7 +176,7 @@ export default function AddService() {
     const { error } = await supabase
       .from("business_services")
       .insert({
-        business_id: businessId,
+        business_id: serviceBusinessId,
         service_name: serviceName.trim(),
         description: description.trim() || null,
         price: numericPrice,
@@ -183,7 +216,7 @@ export default function AddService() {
         cleaning_category: service.cleaning_category || null,
       })
       .eq("id", service.id)
-      .eq("business_id", businessId);
+      .eq("business_id", serviceBusinessId);
 
     if (error) {
       console.error("Unable to update service:", error);
@@ -203,7 +236,7 @@ export default function AddService() {
       .from("business_services")
       .delete()
       .eq("id", id)
-      .eq("business_id", businessId);
+      .eq("business_id", serviceBusinessId);
 
     if (error) {
       console.error("Unable to delete service:", error);
@@ -599,3 +632,4 @@ export default function AddService() {
     </div>
   );
 }
+

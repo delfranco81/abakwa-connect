@@ -4,6 +4,7 @@ export interface OwnedBusiness {
   id: string;
   name: string | null;
   owner_id: string | null;
+  place_id: string | null;
   category: string | null;
   phone: string | null;
   email: string | null;
@@ -28,6 +29,7 @@ const BUSINESS_FIELDS = `
   id,
   name,
   owner_id,
+  place_id,
   category,
   phone,
   email,
@@ -148,3 +150,4 @@ export async function getOwnedBusinessById(
 
   return data ?? null;
 }
+

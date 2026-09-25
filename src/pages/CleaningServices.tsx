@@ -23,6 +23,7 @@ type Business = {
 type CleaningService = {
   id: string;
   business_id: string;
+  canonical_business_id: string | null;
   cleaning_category: string | null;
   service_name: string;
   description: string | null;
@@ -132,10 +133,10 @@ function CleaningServices() {
             id,
             name,
             category,
-            area,
+            subdivision,
             city,
             verified,
-            logo,
+            image,
             cover_image,
             phone
           )
@@ -159,6 +160,45 @@ function CleaningServices() {
       return;
     }
 
+    const placeIds = Array.from(
+      new Set(
+        (data ?? [])
+          .map((item: any) => String(item.business_id))
+          .filter(Boolean)
+      )
+    );
+
+    const businessIdByPlaceId = new Map<string, string>();
+
+    if (placeIds.length > 0) {
+      const { data: businessRows, error: businessError } =
+        await supabase
+          .from("business")
+          .select("id,place_id")
+          .in("place_id", placeIds);
+
+      if (businessError) {
+        console.error(
+          "CleaningServices.loadBusinesses:",
+          businessError
+        );
+
+        setError(t("cleaningServicesLoadError"));
+        setServices([]);
+        setLoading(false);
+        return;
+      }
+
+      for (const row of businessRows ?? []) {
+        if (row.place_id && row.id) {
+          businessIdByPlaceId.set(
+            String(row.place_id),
+            String(row.id)
+          );
+        }
+      }
+    }
+
     const normalizedServices: CleaningService[] =
       (data ?? [])
         .filter(
@@ -178,10 +218,10 @@ function CleaningServices() {
                 id: String(rawBusiness.id),
                 name: rawBusiness.name ?? null,
                 category: rawBusiness.category ?? null,
-                area: rawBusiness.area ?? null,
+                area: rawBusiness.subdivision ?? null,
                 city: rawBusiness.city ?? null,
                 verified: rawBusiness.verified ?? null,
-                logo: rawBusiness.logo ?? null,
+                logo: rawBusiness.image ?? null,
                 cover_image:
                   rawBusiness.cover_image ?? null,
                 phone: rawBusiness.phone ?? null,
@@ -191,6 +231,8 @@ function CleaningServices() {
         return {
           id: String(item.id),
           business_id: String(item.business_id),
+          canonical_business_id:
+            businessIdByPlaceId.get(String(item.business_id)) ?? null,
           cleaning_category:
             item.cleaning_category ?? null,
           service_name: String(item.service_name),
@@ -1111,13 +1153,13 @@ function ServiceCard({
             )}
 
             <Link
-              to={`/cleaning-booking?businessId=${service.business_id}&serviceId=${service.id}`}
+              to={`/cleaning-booking?businessId=${service.canonical_business_id ?? ""}&serviceId=${service.id}`}
               className="cleaning-service-book-button"
             >
               {t("cleaningBookingBookService")}
             </Link>
             <Link
-              to={`/business/${service.business_id}`}
+              to={`/business/${service.canonical_business_id ?? ""}`}
               style={{
                 background: "#003b36",
                 color: "white",
@@ -1304,6 +1346,9 @@ const selectStyle = {
 };
 
 export default CleaningServices;
+
+
+
 
 
 

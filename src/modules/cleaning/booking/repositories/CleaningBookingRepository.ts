@@ -38,7 +38,7 @@ export class CleaningBookingRepository {
       throw new Error(servicesError.message);
     }
 
-    const businessIds = Array.from(
+    const placeIds = Array.from(
       new Set(
         (cleaningServices ?? [])
           .map((service) => service.business_id)
@@ -46,14 +46,14 @@ export class CleaningBookingRepository {
       )
     );
 
-    if (businessIds.length === 0) {
+    if (placeIds.length === 0) {
       return [];
     }
 
     const { data: businesses, error: businessesError } = await supabase
       .from("business")
-      .select("id,name,phone,address,verified")
-      .in("id", businessIds)
+      .select("id,name,phone,address,verified,place_id")
+      .in("place_id", placeIds)
       .order("name", { ascending: true });
 
     if (businessesError) {
@@ -72,12 +72,26 @@ export class CleaningBookingRepository {
   async getProviderServices(
     businessId: string
   ): Promise<ProviderService[]> {
+    const { data: business, error: businessError } = await supabase
+      .from("business")
+      .select("place_id")
+      .eq("id", businessId)
+      .maybeSingle();
+
+    if (businessError) {
+      throw new Error(businessError.message);
+    }
+
+    if (!business?.place_id) {
+      return [];
+    }
+
     const { data, error } = await supabase
       .from("business_services")
       .select(
         "id,business_id,service_name,description,price,currency,duration_minutes,active,cleaning_category"
       )
-      .eq("business_id", businessId)
+      .eq("business_id", business.place_id)
       .eq("active", true)
       .not("cleaning_category", "is", null)
       .order("display_order", { ascending: true });
@@ -88,7 +102,6 @@ export class CleaningBookingRepository {
 
     return (data ?? []) as ProviderService[];
   }
-
   async create(
     data: CleaningBooking
   ): Promise<CleaningBooking> {
@@ -264,6 +277,7 @@ export class CleaningBookingRepository {
     };
   }
 }
+
 
 
 
