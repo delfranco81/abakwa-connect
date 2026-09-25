@@ -34,6 +34,9 @@ function Dashboard() {
   const [customerCount, setCustomerCount] =
     useState(0);
 
+  const [revenue, setRevenue] =
+    useState(0);
+
   useEffect(() => {
     loadBusiness();
   }, [businessId]);
@@ -113,6 +116,33 @@ function Dashboard() {
         }
       } else {
         setCustomerCount(0);
+      }
+
+      if (ownedBusiness?.id) {
+        const { data: completedBookings, error: revenueError } =
+          await supabase
+            .from("bookings")
+            .select("amount")
+            .eq("business_id", ownedBusiness.id)
+            .eq("status", "completed");
+
+        if (revenueError) {
+          console.error(
+            "Unable to load recorded revenue:",
+            revenueError
+          );
+          setRevenue(0);
+        } else {
+          const totalRevenue = (completedBookings ?? []).reduce(
+            (total, booking) =>
+              total + Number(booking.amount ?? 0),
+            0
+          );
+
+          setRevenue(totalRevenue);
+        }
+      } else {
+        setRevenue(0);
       }
     } catch (err) {
       console.error("Business dashboard error:", err);
@@ -369,7 +399,7 @@ function Dashboard() {
 
               <DashboardCard
                 title={t.businessDashboardRevenue}
-                value="0 FCFA"
+                value={`${revenue.toLocaleString()} FCFA`}
                 description={
                   t.businessDashboardTotalRecordedRevenue
                 }
@@ -801,6 +831,7 @@ function ManagementCard({
 }
 
 export default Dashboard;
+
 
 
 
