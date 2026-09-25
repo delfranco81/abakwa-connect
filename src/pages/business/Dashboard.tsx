@@ -31,6 +31,9 @@ function Dashboard() {
   const [bookingCount, setBookingCount] =
     useState(0);
 
+  const [customerCount, setCustomerCount] =
+    useState(0);
+
   useEffect(() => {
     loadBusiness();
   }, [businessId]);
@@ -85,6 +88,31 @@ function Dashboard() {
         }
       } else {
         setBookingCount(0);
+      }
+      if (ownedBusiness?.id) {
+        const { data: customerBookings, error: customerCountError } =
+          await supabase
+            .from("bookings")
+            .select("customer_id")
+            .eq("business_id", ownedBusiness.id);
+
+        if (customerCountError) {
+          console.error(
+            "Unable to load customer count:",
+            customerCountError
+          );
+          setCustomerCount(0);
+        } else {
+          const uniqueCustomerIds = new Set(
+            (customerBookings ?? [])
+              .map((booking) => booking.customer_id)
+              .filter(Boolean)
+          );
+
+          setCustomerCount(uniqueCustomerIds.size);
+        }
+      } else {
+        setCustomerCount(0);
       }
     } catch (err) {
       console.error("Business dashboard error:", err);
@@ -325,7 +353,7 @@ function Dashboard() {
 
               <DashboardCard
                 title={t.businessDashboardCustomers}
-                value="0"
+                value={String(customerCount)}
                 description={
                   t.businessDashboardCustomersServed
                 }
@@ -773,6 +801,7 @@ function ManagementCard({
 }
 
 export default Dashboard;
+
 
 
 
